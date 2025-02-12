@@ -9,6 +9,7 @@ import AboutUs from './Pages/AboutUs';
 import Cart from './Pages/Cart';
 import Favourite from './Pages/Favourite';
 import LoginSignup from './Pages/LoginSignup';
+import Footer from './Component/Footer/Footer';
 
 function App() {
   const [count, setCount] = useState(0);
@@ -30,6 +31,8 @@ function App() {
           <Route path='/favourite' element={<Favourite />} />
           <Route path='/login' element={<LoginSignup />} />
         </Routes>
+        <Footer />
+        
       </BrowserRouter>
     </div>
   );

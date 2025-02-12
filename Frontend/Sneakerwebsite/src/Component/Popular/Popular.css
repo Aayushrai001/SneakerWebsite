@@ -1,23 +1,38 @@
-.popular{
+.popular {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 10px;
     height: 90vh;
 }
-.popular h1{
+
+.popular h1 {
     color: #171717;
     font-size: 50px;
     font-weight: 600;
 }
-.popular hr{
+
+.popular hr {
     width: 200px;
     height: 6px;
     border-radius: 10px;
     background: #252525;
 }
-.popular-item{
+
+.popular-item {
     margin-top: 50px;
     display: flex;
-    gap: 10px;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+/* Hover Effect for Popular Items */
+.popular-item .item {
+    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+.popular-item .item:hover {
+    transform: scale(1.05);
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
 }

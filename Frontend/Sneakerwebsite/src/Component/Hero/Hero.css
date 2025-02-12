@@ -37,6 +37,10 @@
     font-size: 22px;
     font-weight: 500;
 }
+.hero-latest-btn:hover{
+        background: #ff4141;
+        transform: scale(1.05);
+}
 .hero-right{
     flex: 1;
     display: flex;

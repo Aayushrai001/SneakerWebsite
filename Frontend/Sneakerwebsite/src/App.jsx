@@ -28,11 +28,12 @@ function App() {
           <Route path='/kids' element={<ShopCategory banner={kid_banner} category="kid" />} />
           <Route path='/personalize' element={<Personalize />} />
           <Route path='/aboutUs' element={<AboutUs />} />
-          <Route path="/product" element={<Product />} />
+          <Route path="/product" element={<Product />} >
           <Route path=':productId' element={<Product />} />
+          </Route>
           <Route path='/cart' element={<Cart />} />
           <Route path='/favourite' element={<Favourite />} />
-          <Route path='/login' element={<LoginSignup />} />
+          <Route path='/login' element={<LoginSignup/>} />
         </Routes>
         <Footer />
       </BrowserRouter>

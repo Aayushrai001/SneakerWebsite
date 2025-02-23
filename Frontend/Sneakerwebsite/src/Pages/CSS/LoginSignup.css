@@ -1,0 +1,84 @@
+.loginsignup {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #fce3fe;
+  }
+  
+  .loginsignup-container {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    width: 350px;
+  }
+  
+  h1 {
+    margin-bottom: 1rem;
+    color: #333;
+  }
+  
+  .loginsignup-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .loginsignup-fields input {
+    width: 95%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+  }
+  
+.login{
+    width: 100%;
+    padding: 10px;
+    background-color: #ff4141;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  
+ .login:hover {
+    background-color: #ff4141de;
+  }
+  
+  .loginsignup-login {
+    margin-top: 1rem;
+    font-size: 14px;
+  }
+  
+  .loginsignup-login span {
+    color: #ff4141;
+    cursor: pointer;
+  }
+  
+  .loginsignup-login span:hover {
+    text-decoration: underline;
+  }
+  
+  .loginsingup-agree {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 1rem;
+    font-size: 12px;
+    color: #555;
+  }
+  
+  .loginsingup-agree input {
+    margin-bottom: 5px;
+  }
+  
+  .loginsingup-agree p {
+    text-align: center;
+    margin: 0;
+  }
+  

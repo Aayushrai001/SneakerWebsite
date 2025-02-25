@@ -1,8 +1,10 @@
 import React from 'react'
+import FavouriteItems from '../Component/FavouriteItems/FavouriteItems'
 
-function Favourite() {
+const Favourite = () => {
   return (
     <div>
+      <FavouriteItems/>
       
     </div>
   )

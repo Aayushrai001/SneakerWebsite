@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import './Navbar.css';
 import logo from '../assets/logo.png';
 import cart_icon from '../assets/cart_icon.png';
 import heart_icon from '../assets/heart-icon.png';
 import { Link } from 'react-router-dom';
- 
+import { ShopContext } from '../../Context/ShopContext';
+
 const Navbar = () => {
     const [menu, setMenu] = useState("Home");
+    const { getTotalCartItems } = useContext(ShopContext);
+    const { getTotalFavouriteItems} = useContext(ShopContext);
 
     return (
         <div className="navbar">
@@ -15,22 +18,29 @@ const Navbar = () => {
                 <p>Sneaker.NP</p>
             </div>
             <ul className="nav-menu">
-                <li onClick={() => { setMenu("Shop") }}><Link style={{ textDecoration: 'none'}} to='/'>Shop</Link>{menu === "Shop" ? <hr /> : <></>}</li>
-                <li onClick={() => { setMenu("mens") }}><Link style={{ textDecoration: 'none'}} to='/mens'>Mens</Link>{menu === "mens" ? <hr /> : <></>}</li>
-                <li onClick={() => { setMenu("womens") }}><Link style={{ textDecoration: 'none'}} to="womens">Womens</Link>{menu === "womens" ? <hr /> : <></>}</li>
-                <li onClick={() => { setMenu("kids") }}><Link style={{ textDecoration: 'none'}} to='/kids'>Kids</Link>{menu === "kids" ? <hr /> : <></>}</li>
-                <li onClick={() => { setMenu("personalize") }}><Link style={{ textDecoration: 'none'}} to='/personalize'>Personalize</Link>{menu === "personalize" ? <hr /> : <></>}</li>
-                <li onClick={() => { setMenu("aboutUs") }}><Link style={{ textDecoration: 'none'}} to='/aboutus'>Aboutus</Link>{menu === "aboutUs" ? <hr /> : <></>}</li>
-            </ul> 
+                <li onClick={() => { setMenu("Shop") }}><Link style={{ textDecoration: 'none' }} to='/'>Shop</Link>{menu === "Shop" ? <hr /> : <></>}</li>
+                <li onClick={() => { setMenu("mens") }}><Link style={{ textDecoration: 'none' }} to='/mens'>Mens</Link>{menu === "mens" ? <hr /> : <></>}</li>
+                <li onClick={() => { setMenu("womens") }}><Link style={{ textDecoration: 'none' }} to="womens">Womens</Link>{menu === "womens" ? <hr /> : <></>}</li>
+                <li onClick={() => { setMenu("kids") }}><Link style={{ textDecoration: 'none' }} to='/kids'>Kids</Link>{menu === "kids" ? <hr /> : <></>}</li>
+                <li onClick={() => { setMenu("personalize") }}><Link style={{ textDecoration: 'none' }} to='/personalize'>Personalize</Link>{menu === "personalize" ? <hr /> : <></>}</li>
+                <li onClick={() => { setMenu("aboutUs") }}><Link style={{ textDecoration: 'none' }} to='/aboutus'>Aboutus</Link>{menu === "aboutUs" ? <hr /> : <></>}</li>
+            </ul>
             <div className="nav-login-cart">
                 <Link to='/login'><button>Login</button></Link>
-                <Link to='/cart'><img src={cart_icon} alt="" /></Link>
-                <div className="nav-cart-count">0</div>
-                <Link to='/favourite'>
-                  <img src={heart_icon} alt="" />
+
+                {/* Cart Icon with Count */}
+                <Link to='/cart' className="nav-icon-wrapper">
+                    <img src={cart_icon} alt="Cart" />
+                    <div className="nav-cart-count">{getTotalCartItems()}</div>
                 </Link>
-                <div className="nav-cart-count">0</div>
+
+                {/* Heart Icon with Count */}
+                <Link to='/favourite' className="nav-icon-wrapper">
+                    <img src={heart_icon} alt="Favourite" />
+                    <div className="nav-cart-count">{getTotalFavouriteItems()}</div> 
+                </Link>
             </div>
+
         </div>
     );
 };

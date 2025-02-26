@@ -1,5 +1,8 @@
 .item{
-    width: 350px;
+    width: 280px;
+}
+.item img{
+    width: 280px;
 }
 .item p{
     margin: 6px 0px;

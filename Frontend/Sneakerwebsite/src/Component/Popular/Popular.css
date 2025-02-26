@@ -3,6 +3,7 @@
     flex-direction: column;
     align-items: center;
     gap: 10px;
+    padding: 20px;
     height: 90vh;
 }
 
@@ -22,17 +23,15 @@
 .popular-item {
     margin-top: 50px;
     display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
-    justify-content: center;
+    gap: 30px;
 }
 
-/* Hover Effect for Popular Items */
-.popular-item .item {
-    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+/* If you want to add some hover effects to the items */
+/* .popular-item .item {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .popular-item .item:hover {
-    transform: scale(1.05);
-    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
-}
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+} */

@@ -1,13 +1,13 @@
-import React, { useContext } from 'react'
-import './ProductDisplay.css'
-import star_icon from '../assets/star_icon.png'
-import star_dull_icon from '../assets/star_dull_icon.png'
-import { ShopContext } from '../../Context/ShopContext'
+import React, { useContext, useState } from 'react';
+import './ProductDisplay.css';
+import star_icon from '../assets/star_icon.png';
+import star_dull_icon from '../assets/star_dull_icon.png';
+import { ShopContext } from '../../Context/ShopContext';
 
 const ProductDisplay = (props) => {
     const { product } = props;
-    const {addtoCart} = useContext(ShopContext);
-    const {addtoFavourite} = useContext(ShopContext);
+    const { addtoCart, addtoFavourite } = useContext(ShopContext);
+    const [showCheckout, setShowCheckout] = useState(false);
 
     return (
         <div className="productdisplay">
@@ -36,8 +36,7 @@ const ProductDisplay = (props) => {
                     <div className="productdisplay-right-price-new">${product.new_price}</div>
                 </div>
                 <div className="productdisplay-right-description">
-                    jsdcvkhsdkjfcisdh fvhdosihfs ishdgfviusag iushgviufg viusfgiuvs iugsiuvusv ishdgfviusagsifgusfs
-                    hvuisfvihs isfvissh iushisaklgb8ui7awerfg ofhfiusbfs 8 9gfusavjkfhwd8 usgdufysgu
+                    Product description goes here...
                 </div>
                 <div className="productdislay-right-size">
                     <h1>Select Size</h1>
@@ -50,14 +49,29 @@ const ProductDisplay = (props) => {
                     </div>
                 </div>
                 <div className="productdisplay-right-buttons">
-                    <button className='productdisplay-right-cart' onClick={()=>{addtoCart(product.id)}}>ADD TO CART</button>
-                    <button className='productdisplay-right-favorite' onClick={()=>{addtoFavourite(product.id)}}>ADD TO FAVORITE</button>
+                    <button className='productdisplay-right-cart' onClick={() => { addtoCart(product.id) }}>ADD TO CART</button>
+                    <button className='productdisplay-right-favorite' onClick={() => { addtoFavourite(product.id) }}>ADD TO FAVORITE</button>
                 </div>
                 <p className='productdisplay-right-category'><span>Category :</span> Mens and Women</p>
                 <p className='productdisplay-right-category'><span>Tags :</span> Modern, Latest</p>
+                <button className='checkout' onClick={() => setShowCheckout(true)}>CHECKOUT</button>
+                {showCheckout && (
+                    <div className="checkout-container">
+                        <h2>Checkout</h2>
+                        <div className="checkout-info">
+                            <h3>Total Amount:</h3>
+                            <h3>Rs. {product.new_price}</h3>
+                        </div>
+                        <div className="checkout-method">
+                            <h2>Payment Method:</h2>
+                        </div>
+                        <button>Pay with Khalti</button>
+                        <button onClick={() => setShowCheckout(false)}>Payment Cancel</button>
+                    </div>
+                )}
             </div>
         </div>
-    )
-}
+    );
+};
 
-export default ProductDisplay
+export default ProductDisplay;

@@ -8,6 +8,11 @@ const ProductDisplay = (props) => {
     const { product } = props;
     const { addtoCart, addtoFavourite } = useContext(ShopContext);
     const [showCheckout, setShowCheckout] = useState(false);
+    const [selectedSize, setSelectedSize] = useState('');
+
+    const handleSizeChange = (event) => {
+        setSelectedSize(event.target.value);
+    };
 
     return (
         <div className="productdisplay">
@@ -33,20 +38,21 @@ const ProductDisplay = (props) => {
                     <p>(122)</p>
                 </div>
                 <div className="productdisplay-right-prices">
-                    <div className="productdisplay-right-price-new">${product.new_price}</div>
+                    <div className="productdisplay-right-price-new">Rs.{product.new_price}</div>
                 </div>
                 <div className="productdisplay-right-description">
-                    Product description goes here...
+                    One of the most popular sneakers available in markets.
                 </div>
-                <div className="productdislay-right-size">
+                <div className="productdisplay-right-size">
                     <h1>Select Size</h1>
-                    <div className="productdisplay-right-size">
-                        <div>22</div>
-                        <div>27</div>
-                        <div>39</div>
-                        <div>42</div>
-                        <div>44</div>
-                    </div>
+                    <select value={selectedSize} onChange={handleSizeChange} className="productdisplay-right-size-select">
+                        <option value="">Select a size</option>
+                        {Array.from({ length: 25 }, (_, i) => 20 + i).map((size) => (
+                            <option key={size} value={size}>
+                                {size}
+                            </option>
+                        ))}
+                    </select>
                 </div>
                 <div className="productdisplay-right-buttons">
                     <button className='productdisplay-right-cart' onClick={() => { addtoCart(product.id) }}>ADD TO CART</button>

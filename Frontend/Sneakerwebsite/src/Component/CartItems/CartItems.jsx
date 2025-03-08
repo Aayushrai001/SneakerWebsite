@@ -4,7 +4,7 @@ import { ShopContext } from '../../Context/ShopContext';
 import remove_icon from '../assets/cart_cross_icon.png';
 
 const CartItems = () => {
-    const { getTotalCartAmount, all_product, cartItems, removefromCart } = useContext(ShopContext);
+    const { getTotalCartAmount, all_product, cartItems, removefromCart, addToCart, decreaseCartItem } = useContext(ShopContext);
     const [showCheckout, setShowCheckout] = useState(false);
 
     return (
@@ -26,13 +26,17 @@ const CartItems = () => {
                             <img src={product.image} alt="" className='carticon-product-icon' />
                             <p>{product.name}</p>
                             <p>Rs.{product.new_price}</p>
-                            <button className="cartitem-quantity">{cartItems[product.id]}</button>
+                            <div className="cartitem-quantity-controls">
+                                <button onClick={() => decreaseCartItem(product.id)}>-</button>
+                                <span>{cartItems[product.id]}</span>
+                                <button onClick={() => addToCart(product.id)}>+</button>
+                            </div>
                             <p>Rs.{product.new_price * cartItems[product.id]}</p>
-                            <img 
-                                src={remove_icon} 
-                                onClick={() => removefromCart(product.id)} 
-                                alt="Remove" 
-                                className="cartitems-remove-icon" 
+                            <img
+                                src={remove_icon}
+                                onClick={() => removefromCart(product.id)}
+                                alt="Remove"
+                                className="cartitems-remove-icon"
                             />
                         </div>
                         <hr />
@@ -88,4 +92,4 @@ const CartItems = () => {
     );
 }
 
-export default CartItems
+export default CartItems;

@@ -1,5 +1,5 @@
 .cartitems {
-    margin: 100px 170px;
+    margin: 50px 50px;
 }
 
 .cartitems hr {
@@ -13,7 +13,7 @@
     display: grid;
     grid-template-columns: 0.5fr 2fr 1fr 1fr 1fr 1fr;
     align-items: center;
-    gap: 75px;
+    gap: 20px;
     padding: 20px 0;
     color: #454545;
     font-size: 18px;
@@ -26,7 +26,7 @@
     display: grid;
     grid-template-columns: 0.5fr 2fr 1fr 1fr 1fr 1fr;
     align-items: center;
-    gap: 75px;
+    gap: 20px;
     padding: 15px 0;
     font-size: 17px;
     font-weight: 500;
@@ -39,15 +39,20 @@
     object-fit: contain;
 }
 
-/* Quantity Button */
-.cartitem-quantity {
+.cartitem-quantity-controls {
+    display: flex;
+    align-items: center;
+}
+
+.cartitem-quantity-controls button {
     padding: 5px 10px;
     font-size: 16px;
-    font-weight: 500;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    background-color: #f8f8f8;
     cursor: pointer;
+}
+
+.cartitem-quantity-controls span {
+    margin: 0 10px;
+    font-size: 16px;
 }
 
 /* Remove Icon */
@@ -60,30 +65,35 @@
 .cartitems-remove-icon:hover {
     transform: scale(1.2);
 }
-.cartitem-quantity{
+
+.cartitem-quantity {
     width: 64px;
     height: 50px;
     border: 2px solid #ebebeb;
     background: #fff;
 }
-.cartitems-down{
+
+.cartitems-down {
     display: flex;
-    margin: 100px 0px;
+    flex-direction: column;
+    margin: 50px 0;
 }
-.cartitems-total{
+
+.cartitems-total {
     flex: 1;
     display: flex;
     flex-direction: column;
-    margin-right: 200px;
-    gap: 40px;
+    gap: 20px;
 }
-.cartitems-total-item{
+
+.cartitems-total-item {
     display: flex;
     justify-content: space-between;
-    padding: 15px 0px;
+    padding: 15px 0;
 }
-.cartitems-total button{
-    width: 262px;
+
+.cartitems-total button {
+    width: 100%;
     height: 58px;
     outline: none;
     border: none;
@@ -93,31 +103,36 @@
     font-weight: 600;
     cursor: pointer;
 }
-.cartitems-promocode{
+
+.cartitems-promocode {
     flex: 1;
     font-size: 16px;
     font-weight: 500;
 }
-.cartitems-promocode p{
+
+.cartitems-promocode p {
     color: #555;
 }
-.cartitems-promobox{
-    width: 504px;
+
+.cartitems-promobox {
+    width: 100%;
     margin-top: 15px;
     padding-left: 20px;
     height: 58px;
     background: #eaeaea;
 }
-.cartitems-promobox input{
+
+.cartitems-promobox input {
     border: none;
     outline: none;
     background: transparent;
     font-size: 16px;
-    width: 330px;
+    width: 60%;
     height: 50px;
 }
-.cartitems-promobox button{
-    width: 170px;
+
+.cartitems-promobox button {
+    width: 40%;
     height: 58px;
     font-size: 16px;
     background: black;

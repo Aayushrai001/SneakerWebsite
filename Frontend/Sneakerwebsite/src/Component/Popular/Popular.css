@@ -25,13 +25,33 @@
     display: flex;
     gap: 30px;
 }
-
-/* If you want to add some hover effects to the items */
-/* .popular-item .item {
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.popular-item .item:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-} */
+@media (max-width: 1280px) {
+    .popular-item {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  
+  @media (max-width: 1024px) {
+    .popular-item {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  
+  @media (max-width: 800px) {
+    .popular-item {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+    }
+  }
+  
+  @media (max-width: 500px) {
+    .popular{
+        height: 90vh;
+        margin-bottom: 40px;
+    }
+    .popular-item {
+        display: grid;
+        grid-template-columns:1fr, 1fr;
+        gap: 50px;
+    }
+  }

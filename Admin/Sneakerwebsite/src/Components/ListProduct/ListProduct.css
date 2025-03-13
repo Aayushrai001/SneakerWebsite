@@ -1,0 +1,121 @@
+.listproduct-search {
+    width: 100%;
+    max-width: 400px;
+    padding: 10px;
+    margin: 10px auto;
+    display: block;
+    border: 1px solid black;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+.no-products-message {
+    text-align: center;
+    font-size: 20px;
+    color: Red;
+    margin-top: 30px;
+}
+
+.list-product {
+    width: 90%;
+    max-width: 1200px;
+    background: #fff;
+}
+
+.list-product h1 {
+    text-align: center;
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
+.listproduct-format-main {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr 1fr 1fr;
+    align-items: center;
+    background: white;
+    padding: 10px 15px;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+.listproduct-allproducts {
+    margin-top: 10px;
+}
+
+.listproduct-forrmat-main {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr 1fr 1fr;
+    align-items: center;
+    padding: 10px 15px;
+    border-bottom: 1px solid #ddd;
+    transition: background 0.3s;
+}
+
+
+.listproduct-product-icon {
+    width: 130px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 5px;
+}
+
+.listproduct-remove-icon {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    transition: transform 0.2s ease-in-out;
+}
+
+.listproduct-remove-icon:hover {
+    transform: scale(1.2);
+}
+
+hr {
+    border: none;
+    height: 1px;
+    background: #ddd;
+    margin: 10px 0;
+}
+
+@media (max-width: 800px) {
+
+    .listproduct-format-main,
+    .listproduct-forrmat-main {
+        grid-template-columns: 1fr 1.5fr 1fr 1fr 1fr;
+        font-size: 14px;
+    }
+
+    .listproduct-product-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .listproduct-remove-icon {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+@media (max-width: 500px) {
+    .list-product {
+        width: 100%;
+        padding: 15px;
+    }
+
+    .listproduct-format-main,
+    .listproduct-forrmat-main {
+        grid-template-columns: 1fr 1fr;
+        gap: 2px;
+        text-align: center;
+    }
+
+    .listproduct-product-icon {
+        width: 35px;
+        height: 35px;
+    }
+
+    .listproduct-remove-icon {
+        width: 16px;
+        height: 16px;
+    }
+}

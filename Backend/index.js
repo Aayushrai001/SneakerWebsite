@@ -4,19 +4,25 @@ const multer = require('multer');
 const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs');
+const cors = require('cors');
+const Jwt = require('jsonwebtoken'); // Added JWT module
 require('dotenv').config();
 
 // Initialize express app
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error(err));
+// Use CORS middleware to enable cross-origin requests
+app.use(cors());
 
-// Middleware
+// Middleware to parse JSON bodies
 app.use(express.json());
+
+// Connect to MongoDB
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log('MongoDB connected'))
+  .catch((err) => console.error(err));
 
 // Ensure upload directory exists
 const uploadDir = './upload/images';
@@ -32,12 +38,12 @@ app.get('/', (req, res) => {
   res.send('MERN App is running!');
 });
 
-// Image storage engine
+// Image storage engine for multer
 const storage = multer.diskStorage({
   destination: uploadDir,
   filename: (req, file, cb) => {
     cb(null, `${file.fieldname}_${Date.now()}${path.extname(file.originalname)}`);
-  }
+  },
 });
 
 const upload = multer({ storage });
@@ -50,15 +56,15 @@ app.post('/upload', upload.single('product'), (req, res) => {
 
   res.json({
     success: 1,
-    image_url: `http://localhost:${PORT}/images/${req.file.filename}`
+    image_url: `http://localhost:${PORT}/images/${req.file.filename}`,
   });
 });
 
-// Schema for creating products
+// Product Schema and Model
 const ProductSchema = new mongoose.Schema({
   id: {
     type: Number,
-    required: true, 
+    required: true,
     unique: true,
   },
   name: {
@@ -96,7 +102,7 @@ app.post('/addproduct', async (req, res) => {
     let id = products.length > 0 ? products[products.length - 1].id + 1 : 1;
 
     const newProduct = new Product({
-      id: id,  // Fix: Assign computed ID
+      id: id,
       name: req.body.name,
       image: req.body.image,
       category: req.body.category,
@@ -104,13 +110,22 @@ app.post('/addproduct', async (req, res) => {
     });
 
     await newProduct.save();
-    res.status(201).json({ success: 1, name: req.body.name, message: 'Product added successfully', product: newProduct });
+    res.status(201).json({
+      success: 1,
+      name: req.body.name,
+      message: 'Product added successfully',
+      product: newProduct,
+    });
   } catch (error) {
-    res.status(500).json({ success: 0, message: 'Error adding product', error: error.message });
+    res.status(500).json({
+      success: 0,
+      message: 'Error adding product',
+      error: error.message,
+    });
   }
 });
 
-//Delete product endpoint
+// Delete product endpoint
 app.post('/removeproduct', async (req, res) => {
   try {
     const removedProduct = await Product.findOneAndDelete({ id: req.body.id });
@@ -122,15 +137,19 @@ app.post('/removeproduct', async (req, res) => {
       success: true,
       name: req.body.name,
       message: 'Product removed successfully',
-      product: removedProduct
+      product: removedProduct,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Error deleting product', error: error.message });
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting product',
+      error: error.message,
+    });
   }
 });
 
-//getinn all product
-app.get("/allproducts", async (req, res) => {
+// Get all products endpoint
+app.get('/allproducts', async (req, res) => {
   try {
     let products = await Product.find({});
     console.log("All Products");
@@ -139,6 +158,79 @@ app.get("/allproducts", async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 });
+
+// Users Schema and Model
+const Users = mongoose.model(
+  'Users',
+  new mongoose.Schema({
+    name: {
+      type: String,
+    },
+    gender: {
+      type: String,
+    },
+    email: {
+      type: String,
+      unique: true,
+    },
+    passwords: {
+      // Field name changed to match usage in signup endpoint
+      type: String,
+      unique: true,
+    },
+    cartData: {
+      type: Object,
+    },
+    date: {
+      type: Date,
+      default: Date.now,
+    },
+  })
+);
+
+// Create endpoint for registering a user
+app.post('/signup', async (req, res) => {
+  try {
+    // Check if a user already exists with the same email
+    let check = await Users.findOne({ email: req.body.email });
+    if (check) {
+      return res
+        .status(400)
+        .json({ success: false, errors: 'Existing user found with same email' });
+    }
+
+    // Initialize cart data with 300 items set to 0
+    let cart = {};
+    for (let i = 0; i < 300; i++) {
+      cart[i] = 0;
+    }
+
+    // Create a new user with the matching schema field names
+    const user = new Users({
+      name: req.body.name,
+      gender: req.body.gender,
+      email: req.body.email,
+      passwords: req.body.password, // Using `passwords` to match schema
+      cartData: cart,
+    });
+
+    await user.save();
+    const data = {
+      user: {
+        id: user.id,
+      },
+    };
+    const token = Jwt.sign(data, 'secret_ecom');
+    res.json({ success: true, token });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+//endpoint for user login
+app.post('/login',async (req,res)=>{
+
+})
 
 // Start server
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

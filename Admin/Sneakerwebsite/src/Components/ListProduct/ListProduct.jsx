@@ -5,6 +5,7 @@ import cross_icon from '../../assets/cross_icon.png';
 const ListProduct = () => {
   const [allProducts, setAllProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState(""); // Search input state
+  const [visibleProductsCount, setVisibleProductsCount] = useState(3); // State for showing 4 products initially
 
   // Fetch products from API
   const fetchInfo = async () => {
@@ -53,6 +54,15 @@ const ListProduct = () => {
     product.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Function to toggle between showing more or fewer products
+  const toggleShowMore = () => {
+    if (visibleProductsCount === 3) {
+      setVisibleProductsCount(visibleProductsCount + 2); // Show 5 more products
+    } else {
+      setVisibleProductsCount(3); // Reset back to showing only 4 products
+    }
+  };
+
   return (
     <div className='list-product'>
       <h1>All Products List</h1>
@@ -77,7 +87,7 @@ const ListProduct = () => {
       <div className="listproduct-allproducts">
         <hr />
         {filteredProducts.length > 0 ? (
-          filteredProducts.map((product, index) => (
+          filteredProducts.slice(0, visibleProductsCount).map((product, index) => (
             <div key={index} className="listproduct-forrmat-main listproduct">
               <img src={product.image} alt={product.name} className='listproduct-product-icon' />
               <p>{product.name}</p>
@@ -95,6 +105,13 @@ const ListProduct = () => {
           <p className="no-products-message">No products found</p>
         )}
       </div>
+
+      {/* Toggle Show More / Show Less Button */}
+      {filteredProducts.length > visibleProductsCount && (
+        <button onClick={toggleShowMore} className="see-more-btn">
+          {visibleProductsCount === 2 ? 'See More' : 'Show Less'}
+        </button>
+      )}
     </div>
   );
 };

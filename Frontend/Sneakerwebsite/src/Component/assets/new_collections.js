@@ -1,11 +1,11 @@
 import p1_img from "./product_12.png";
-import p2_img from "./product_8.png";
-import p3_img from "./product_9.png";
-import p4_img from "./product_10.png";
-import p5_img from "./product_11.png";
-import p6_img from "./product_2.jpg";
-import p7_img from "./product_3.jpg";
-import p8_img from "./product_5.jpg";
+import p2_img from "./Jordan4 Retro Infrared.jpg";
+import p3_img from "./Nike SB Dunk Low Pro White Gum.jpg";
+import p4_img from "./product_12.png";
+import p5_img from "./Nike SB Dunk Low Pro White Gum.jpg";
+import p6_img from "./Air Jordan1 Retro High Pine Green Black.jpg";
+import p7_img from "./Jordan4 Retro White Laser.jpg";
+import p8_img from "./product_11.png";
 
 let new_collections = [
   {
@@ -33,7 +33,7 @@ let new_collections = [
     new_price: 8000.0,
   },
   {
-    id: 15,
+    id: 6,
     name: "AirJordan 1",
     image: p5_img,
     new_price: 8000.0,

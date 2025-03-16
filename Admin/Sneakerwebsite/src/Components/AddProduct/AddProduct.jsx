@@ -8,7 +8,8 @@ const AddProduct = () => {
     name: "",
     image: "",
     category: "Men",
-    new_price: ""
+    new_price: "",
+    description: ""
   });
 
   const handleImageChange = (e) => {
@@ -93,6 +94,15 @@ const AddProduct = () => {
           <option value="womens">Women</option>
           <option value="kids">Kid</option>
         </select>
+      </div>
+      <div className="addproduct-itemfield">
+        <p>Product Description</p>
+        <input
+          value={productDetails.description} 
+          onChange={handleInputChange} 
+          name='description' 
+          placeholder='Enter product description...'
+        />
       </div>
       <div className="addproduct-itemfield">
         <label htmlFor="file-input">

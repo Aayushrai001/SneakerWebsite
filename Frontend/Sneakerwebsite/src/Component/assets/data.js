@@ -1,7 +1,7 @@
-import p1_img from './product_1.jpg'
-import p2_img from './product_2.jpg'
-import p3_img from './product_3.jpg'
-import p4_img from './product_4.jpg'
+import p1_img from "./Jordan3 Retro Fear Pack.jpg";
+import p2_img from './Air Jordan1 Retro High Pine Green Black.jpg'
+import p3_img from "./Air Jordan1 Retro High Velvet Brown.png";
+import p4_img from "./blackcement.jpg";
 
 let data_product = [
   {

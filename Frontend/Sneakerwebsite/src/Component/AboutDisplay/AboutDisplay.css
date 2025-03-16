@@ -1,32 +1,132 @@
+/* Container for the entire about page */
 .about-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 50px;
-    background-color: #f8f8f8;
-  }
-  
-  .about-content {
-    max-width: 600px;
-    margin-right: 50px;
-  }
-  
-  .about-content h1 {
-    font-size: 90px;
-    color: #333;
-  }
-  
-  .about-content p {
-    font-size: 20px;
-    color: black;
-    line-height: 1.6;
-    
-  }
-  
-  .about-image img {
-    width: 800px;
-    height: 600px;
-    border-radius: 10px;
-    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-  }
-  
+  font-family: Arial, sans-serif;
+  padding: 20px;
+  max-width: 100%;
+  position: relative;
+  overflow: hidden;
+  color: white;
+}
+
+/* Background Styles */
+.about-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: gray;
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+  z-index: -1;
+}
+
+.about-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: black;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  z-index: -1;
+}
+
+.about-image {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 40px;
+  position: relative;
+  z-index: 1;
+}
+
+.sneaker-img {
+  width: 80%;
+  height: 550px;
+  margin: 10px;
+  margin-bottom: 10px;
+}
+.about-content {
+  text-align: center;
+}
+
+.about-content h1 {
+  font-size: 2.5em;
+  margin-bottom: 10px;
+}
+
+.about-content p {
+  font-size: 1.2em;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+/* Author Section Styles */
+.author-section {
+  display: flex;
+  align-items: center;
+  margin-bottom: 40px;
+  position: relative;
+  z-index: 1;
+}
+
+.author-section.left-align {
+  flex-direction: row;
+}
+
+/* .author-section.right-align {
+  flex-direction: row-reverse;
+} */
+
+.author-img {
+  border-radius: 50%;
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
+  margin: 0 20px;
+}
+
+.author-content h2 {
+  font-size: 2em;
+  margin-bottom: 10px;
+}
+
+.author-content p {
+  font-size: 1.2em;
+  line-height: 1.6;
+}
+
+/* Product Section Styles */
+.product-section h2 {
+  font-size: 2em;
+  margin-bottom: 20px;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.product-grid {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.product-card {
+  flex: 1;
+  text-align: center;
+}
+
+.product-card img {
+  max-width: 80%;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.product-card p {
+  font-size: 1.2em;
+  margin: 0;
+}

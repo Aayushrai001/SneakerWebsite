@@ -1,35 +1,34 @@
-import React, { createContext, useState } from "react";
-import all_product from "../Component/assets/all_product";
+import React, { createContext, useEffect, useState } from "react";
 
 export const ShopContext = createContext(null);
 
-const getDefaultCart = () => {
-    let cart = {};
-    for (let index = 0; index < all_product.length; index++) {
-        cart[index] = 0;
-    }
-    return cart;
-};
-
-const getDefaultFavourite = () => {
-    let favourite = {};
-    for (let index = 0; index < all_product.length; index++) {
-        favourite[index] = 0;
-    }
-    return favourite;
-};
+const getDefaultCart = () => ({});
+const getDefaultFavourite = () => ({});
 
 const ShopContextProvider = (props) => {
+    const [all_product, setAll_Product] = useState([]);
     const [cartItems, setCartItems] = useState(getDefaultCart());
     const [favouriteItems, setFavouriteItems] = useState(getDefaultFavourite());
 
+    useEffect(() => {
+        fetch("http://localhost:5000/allproducts")
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error("Network response was not ok");
+                }
+                return response.json();
+            })
+            .then((data) => {
+                setAll_Product(data);
+                console.log("Fetched Products:", data);
+            })
+            .catch((error) => console.error("Error fetching data:", error));
+    }, []);
+
     // Add to cart function
     const addtoCart = (itemId) => {
-        setCartItems((prev) => {
-            const updatedCart = { ...prev, [itemId]: prev[itemId] + 1 };
-            console.log("Updated Cart:", updatedCart);
-            return updatedCart;
-        });
+        setCartItems((prev) => ({...prev,[itemId]: prev[itemId]+1}));
+        
     };
 
     // Remove from cart function
@@ -42,36 +41,31 @@ const ShopContextProvider = (props) => {
         });
     };
 
-    //total cost pf cart item
+    // Get total cost of cart items
     const getTotalCartAmount = () => {
         let totalAmount = 0;
         for (const item in cartItems) {
             if (cartItems[item] > 0) {
-                let itemInfo = all_product.find((product) => product.id === Number(item));
-                totalAmount += itemInfo.new_price * cartItems[item];
+                const itemInfo = all_product.find((product) => product.id === Number(item));
+                if (itemInfo) {
+                    totalAmount += itemInfo.new_price * cartItems[item];
+                }
             }
         }
         return totalAmount;
     };
 
-    //get totol number of item
+    // Get total number of cart items
     const getTotalCartItems = () => {
-        let totalItem = 0;
-        for (const item in cartItems) {
-            if (cartItems[item] > 0) {
-                totalItem += cartItems[item];
-            }
-        }
-        return totalItem;
+        return Object.values(cartItems).reduce((sum, count) => sum + count, 0);
     };
 
     // Add to favourite function
     const addtoFavourite = (itemId) => {
-        setFavouriteItems((prev) => {
-            const updatedFavourite = { ...prev, [itemId]: prev[itemId] + 1 };
-            console.log("Updated Favourite:", updatedFavourite);
-            return updatedFavourite;
-        });
+        setFavouriteItems((prev) => ({
+            ...prev,
+            [itemId]: (prev[itemId] || 0) + 1,
+        }));
     };
 
     // Remove from favourite function
@@ -84,32 +78,38 @@ const ShopContextProvider = (props) => {
         });
     };
 
-    //total cost of Favourite item
+    // Get total cost of favourite items
     const getTotalFavouriteAmount = () => {
         let totalAmount = 0;
         for (const item in favouriteItems) {
             if (favouriteItems[item] > 0) {
-                let itemInfo = all_product.find((product) => product.id === Number(item));
-                totalAmount += itemInfo.new_price * favouriteItems[item];
+                const itemInfo = all_product.find((product) => product.id === Number(item));
+                if (itemInfo) {
+                    totalAmount += itemInfo.new_price * favouriteItems[item];
+                }
             }
         }
         return totalAmount;
     };
 
-    //get totol number of item
+    // Get total number of favourite items
     const getTotalFavouriteItems = () => {
-        let totalItem = 0;
-        for (const item in favouriteItems) {
-            if (favouriteItems[item] > 0) {
-                totalItem += favouriteItems[item];
-            }
-        }
-        return totalItem;
+        return Object.values(favouriteItems).reduce((sum, count) => sum + count, 0);
     };
-    
 
-    const contextValue = { getTotalCartAmount, getTotalCartItems, all_product, cartItems, addtoCart, removefromCart, favouriteItems, addtoFavourite, removefromFavourite,
-        getTotalFavouriteAmount, getTotalFavouriteItems };
+    const contextValue = {
+        all_product,
+        cartItems,
+        favouriteItems,
+        addtoCart,
+        removefromCart,
+        addtoFavourite,
+        removefromFavourite,
+        getTotalCartAmount,
+        getTotalCartItems,
+        getTotalFavouriteAmount,
+        getTotalFavouriteItems,
+    };
 
     return (
         <ShopContext.Provider value={contextValue}>

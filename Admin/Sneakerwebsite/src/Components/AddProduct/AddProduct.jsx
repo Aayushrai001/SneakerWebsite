@@ -90,9 +90,9 @@ const AddProduct = () => {
           name="category" 
           className='add-product-selector'
         >
-          <option value="mens">Men</option>
-          <option value="womens">Women</option>
-          <option value="kids">Kid</option>
+          <option value="men">Men</option>
+          <option value="women">Women</option>
+          <option value="kid">Kid</option>
         </select>
       </div>
       <div className="addproduct-itemfield">

@@ -1,0 +1,100 @@
+/* User Panel Container */
+.user-panel {
+    width: 100%;
+    margin: 40px auto;
+    padding: 20px;
+    background-color: white;
+    text-align: center;
+}
+
+/* User Info Section */
+.user-info {
+    margin-bottom: 20px;
+}
+
+.user-info h2 {
+    font-size: 24px;
+    margin-bottom: 5px;
+}
+
+.user-info p {
+    font-size: 16px;
+    color: #555;
+}
+
+/* Tabs Navigation */
+.tabs {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.tabs button {
+    padding: 10px 20px;
+    border: none;
+    background: #f1f1f1;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: background 0.3s ease;
+}
+
+.tabs button.active {
+    background: #ff4141;
+    color: white;
+}
+
+/* Tab Content */
+.tab-content {
+    text-align: left;
+}
+
+/* Orders & Transactions */
+.orders ul, .transactions ul {
+    list-style: none;
+    padding: 0;
+}
+
+.orders li, .transactions li {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+.orders li:last-child, .transactions li:last-child {
+    border-bottom: none;
+}
+
+/* Status Labels */
+.status {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-weight: bold;
+}
+
+.status.completed {
+    color: white;
+    background: green;
+}
+
+.status.pending {
+    color: white;
+    background: orange;
+}
+
+.status.failed {
+    color: white;
+    background: red;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .user-panel {
+        width: 90%;
+        padding: 15px;
+    }
+
+    .tabs button {
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+}

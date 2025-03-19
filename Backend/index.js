@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
-const Jwt = require('jsonwebtoken'); 
+const Jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 // Initialize express app
@@ -205,7 +205,7 @@ app.post('/signup', async (req, res) => {
     const user = new Users({
       name: req.body.name,
       email: req.body.email,
-      password: req.body.password, 
+      password: req.body.password,
       cartData: cart,
     });
 
@@ -223,27 +223,98 @@ app.post('/signup', async (req, res) => {
 });
 
 //endpoint for user login
-app.post('/login',async (req,res)=>{
-  let user = await Users.findOne({email:req.body.email})
-  if(user){
+app.post('/login', async (req, res) => {
+  let user = await Users.findOne({ email: req.body.email })
+  if (user) {
     const passCompare = req.body.password === user.password;
-    if(passCompare){
+    if (passCompare) {
       const data = {
-        user:{
-          id:user.id
+        user: {
+          id: user.id
         }
       }
-      const token  = Jwt.sign(data,'secret_ecom');
-      res.json({success:true,token});
+      const token = Jwt.sign(data, 'secret_ecom');
+      res.json({ success: true, token });
     }
-    else{
-      res.json({success:false,errors:"Wrong Passwords"});
+    else {
+      res.json({ success: false, errors: "Wrong Passwords" });
     }
   }
-  else{
-    res.json({success:false,errors:"Wrong Email Id"})
+  else {
+    res.json({ success: false, errors: "Wrong Email Id" })
   }
 })
+
+
+
+// Middleware to verify JWT token
+const fetchUser = (req, res, next) => {
+  const token = req.header('auth-token');
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'Access Denied' });
+  }
+
+  try {
+    const data = Jwt.verify(token, 'secret_ecom');
+    req.user = data.user; // Attach user info to the request object
+    next();
+  } catch (error) {
+    res.status(401).json({ success: false, message: 'Invalid Token' });
+  }
+};
+
+// Fetch user name using JWT token
+app.get('/getusername', fetchUser, async (req, res) => {
+  try {
+    const user = await Users.findById(req.user.id).select('name');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    res.json({ success: true, name: user.name });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+
+//new collection end point for newcollection data
+app.get('/newcollections', async (req, res) => {
+  try {
+    const newCollection = await Product.aggregate([
+      { $sample: { size: 8 } } 
+    ]);
+
+    console.log("New Collection Fetched");
+    res.json(newCollection);
+  } catch (error) {
+    console.error("Error fetching new collections:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+//popular endpoint
+app.get("/popular", async (req, res) => {
+  try {
+    const products = await Product.aggregate([
+      { $match: { category: { $in: ["men", "women", "kid"] } } }, // Filter by category
+      { $sample: { size: 4 } } 
+    ]);
+
+    console.log("Random popular products fetched");
+    res.json(products);
+  } catch (error) {
+    console.error("Error fetching popular products:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+//endpoint for adding products in cart
+app.post('/addtocart',async(req,res)=>{
+  
+})
+
+
+
 
 // Start server
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

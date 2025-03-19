@@ -13,6 +13,7 @@ import Footer from './Component/Footer/Footer';
 import men_banner from './Component/assets/banner_mens.png'
 import women_banner from './Component/assets/banner_women.png'
 import kid_banner from './Component/assets/banner_kids.png'
+import UserPanel from './Component/UserPanel/UserPanel';
 
 function App() {
   const [count, setCount] = useState(0);
@@ -34,6 +35,7 @@ function App() {
           <Route path='/cart' element={<Cart />} />
           <Route path='/favourite' element={<Favourite />} />
           <Route path='/login' element={<LoginSignup/>} />
+          <Route path='/UserPanel' element={<UserPanel/>} />
         </Routes>
         <Footer />
       </BrowserRouter>

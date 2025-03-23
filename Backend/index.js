@@ -6,6 +6,7 @@ const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
 const Jwt = require('jsonwebtoken');
+const { send } = require('process');
 require('dotenv').config();
 
 // Initialize express app
@@ -177,6 +178,9 @@ const Users = mongoose.model(
     cartData: {
       type: Object,
     },
+    favoriteData: {
+      type: Object,
+    },
     date: {
       type: Date,
       default: Date.now,
@@ -200,6 +204,11 @@ app.post('/signup', async (req, res) => {
     for (let i = 0; i < 300; i++) {
       cart[i] = 0;
     }
+     // Initialize cart data with 300 items set to 0
+     let favorite = {};
+     for (let i = 0; i < 300; i++) {
+       favorite[i] = 0;
+     }
 
     // Create a new user with the matching schema field names
     const user = new Users({
@@ -207,6 +216,7 @@ app.post('/signup', async (req, res) => {
       email: req.body.email,
       password: req.body.password,
       cartData: cart,
+      favoriteData: favorite,
     });
 
     await user.save();
@@ -308,12 +318,125 @@ app.get("/popular", async (req, res) => {
   }
 });
 
+//creating middleware to fetch user
+const fetchuser = async(req,res,next)=>{
+  const token = req.header('auth-token');
+  if(!token){
+    res.status(401).send({errors:"Please authenticate using valide token"})
+  }
+  else{
+    try{
+      const data = Jwt.verify(token,'secret_ecom');
+      req.user= data.user;
+      next();
+    }catch(error){
+      res.status(401).send({errors:"Please authenticate using valide token"})
+    }
+  }
+}
+
 //endpoint for adding products in cart
-app.post('/addtocart',async(req,res)=>{
-  
+app.post('/AddToCart',fetchuser, async(req,res)=>{
+  console.log("added",req.body.itemId)
+  let userData = await Users.findOne({_id:req.user.id})
+  userData.cartData[req.body.itemId] += 1;
+  await Users.findOneAndUpdate({_id:req.user.id},{cartData:userData.cartData})
+  res.send("Added")
 })
 
+//endpoint for removing products in cart
+app.post('/RemoveCart', fetchuser, async (req, res) => {
+  try {
+      console.log("Removed:", req.body.itemId);
+      let userData = await Users.findOne({ _id: req.user.id });
+      if (userData.cartData[req.body.itemId] && userData.cartData[req.body.itemId] > 0) {
+          userData.cartData[req.body.itemId] -= 1;
+          if (userData.cartData[req.body.itemId] === 0) {
+              delete userData.cartData[req.body.itemId];
+          }
+          await Users.findOneAndUpdate(
+              { _id: req.user.id },
+              { cartData: userData.cartData },
+              { new: true } 
+          );
 
+          return res.json({ message: "Item removed", cartData: userData.cartData });
+      } else {
+          return res.status(400).json({ error: "Item not found in cart or already at 0" });
+      }
+  } catch (error) {
+      console.error("Error in RemoveCart:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+//endpoint to get cartdata
+app.post('/getcart',fetchuser,async(req,res)=>{
+  console.log("GetCart")
+  let userData = await Users.findOne({_id:req.user.id})
+  res.json(userData.cartData)
+})
+
+// Endpoint for adding products to favourites
+app.post('/AddToFavourite', fetchuser, async (req, res) => {
+  try {
+    console.log("Added to Favourite:", req.body.itemId);
+    let userData = await Users.findOne({ _id: req.user.id });
+
+    // Increase favourite count
+    userData.favoriteData[req.body.itemId] += 1;
+    await Users.findOneAndUpdate(
+      { _id: req.user.id },
+      { favoriteData: userData.favoriteData },
+      { new: true } // Return updated document
+    );
+
+    res.json({ message: "Added to Favourite", favoriteData: userData.favoriteData });
+  } catch (error) {
+    console.error("Error adding to favourite:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Endpoint for removing products from favourites
+app.post('/RemoveFavourite', fetchuser, async (req, res) => {
+  try {
+    console.log("Removed from Favourite:", req.body.itemId);
+    let userData = await Users.findOne({ _id: req.user.id });
+
+    if (userData.favoriteData[req.body.itemId] && userData.favoriteData[req.body.itemId] > 0) {
+      userData.favoriteData[req.body.itemId] -= 1;
+      if (userData.favoriteData[req.body.itemId] === 0) {
+        delete userData.favoriteData[req.body.itemId];
+      }
+
+      await Users.findOneAndUpdate(
+        { _id: req.user.id },
+        { favoriteData: userData.favoriteData },
+        { new: true }
+      );
+
+      return res.json({ message: "Item removed from Favourite", favoriteData: userData.favoriteData });
+    } else {
+      return res.status(400).json({ error: "Item not found in favourites or already at 0" });
+    }
+  } catch (error) {
+    console.error("Error removing from favourite:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Endpoint to get favourite data
+app.post('/getfavourite', fetchuser, async (req, res) => {
+  try {
+    console.log("Get Favourite Data");
+    let userData = await Users.findOne({ _id: req.user.id });
+    res.json(userData.favoriteData);
+  } catch (error) {
+    console.error("Error fetching favourite data:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
 
 
 // Start server

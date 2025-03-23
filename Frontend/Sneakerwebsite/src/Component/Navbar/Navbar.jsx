@@ -6,12 +6,11 @@ import logo from '../assets/logo.png';
 import cartIcon from '../assets/cart_icon.png';
 import heartIcon from '../assets/heart-icon.png';
 import navDropdown from '../assets/nav_dropdown.png';
-import UserPanel from '../UserPanel/UserPanel';
 
 const Navbar = () => {
     const [activeMenu, setActiveMenu] = useState("Home");
     const [dropdownOpen, setDropdownOpen] = useState(false);
-    const [userName, setUserName] = useState("");  // Store fetched username
+    const [userName, setUserName] = useState("");
     const menuRef = useRef();
     const { getTotalCartItems, getTotalFavouriteItems } = useContext(ShopContext);
     
@@ -37,8 +36,6 @@ const Navbar = () => {
             const data = await response.json();
             if (data.success) {
                 setUserName(data.name);
-            } else {
-                console.error("Failed to fetch user name:", data.message);
             }
         } catch (error) {
             console.error("Error fetching user name:", error);
@@ -81,11 +78,11 @@ const Navbar = () => {
                 {isAuthenticated ? (
                     <div className="nav-user-menu">
                         <p className="nav-user-name" onClick={() => setDropdownOpen(!dropdownOpen)}>
-                            {userName ? userName : "Loading..."}
+                            {userName || "Loading..."}
                         </p>
                         {dropdownOpen && (
                             <div className="nav-user-dropdown">
-                                <Link to="/UserPanel" className="nav-dropdown-link" onClick={() => setDropdownOpen(false)}>My Details</Link>
+                                <Link to="/UserPanel" className="nav-dropdown-link">My Details</Link>
                                 <Link to="/" className="nav-dropdown-link" onClick={() => { 
                                     localStorage.removeItem('auth-token'); 
                                     window.location.replace('/'); 
@@ -99,12 +96,12 @@ const Navbar = () => {
                 
                 <Link to="/cart" className="nav-icon-wrapper">
                     <img src={cartIcon} alt="Cart" />
-                    <div className="nav-cart-count">{getTotalCartItems()}</div>
+                    <div className="nav-cart-count">{getTotalCartItems() || 0}</div>
                 </Link>
                 
                 <Link to="/favourite" className="nav-icon-wrapper">
                     <img src={heartIcon} alt="Favourite" />
-                    <div className="nav-cart-count">{getTotalFavouriteItems()}</div>
+                    <div className="nav-cart-count">{getTotalFavouriteItems() || 0}</div>
                 </Link>
             </div>
         </nav>

@@ -1,0 +1,102 @@
+/* src/pages/PaymentSuccess.css */
+.payment-success {
+  text-align: center;
+  padding: 50px;
+  font-family: Arial, sans-serif;
+}
+
+.payment-success h1 {
+  color: #28a745;
+  font-size: 2.5em;
+  margin-bottom: 20px;
+}
+
+.payment-success h2 {
+  font-size: 1.8em;
+  margin-top: 10px;
+  margin-bottom: 15px;
+}
+
+.payment-success p {
+  font-size: 1.2em;
+  margin: 10px 0;
+}
+
+.payment-success a {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  text-decoration: none;
+  border-radius: 5px;
+}
+
+.payment-success a:hover {
+  background-color: #0056b3;
+}
+
+.order-details {
+  margin: 20px 0;
+  padding: 20px;
+  border-radius: 5px;
+  display: flex; /* Use flexbox to align image and details side by side */
+  align-items: center; /* Vertically center the content */
+  justify-content: center; /* Center the entire flex container */
+  text-align: left;
+  width: 100%;
+  max-width: 1200px; /* Optional: limit width for larger screens */
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.product-image-container {
+  flex: 1; /* Take up available space on the left */
+  margin-right: 20px; /* Space between image and details */
+  text-align: center; /* Center the image within its container */
+}
+
+.product-image {
+  max-width: 600px;
+  max-height: 400px;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.no-image {
+  width: 300px;
+  height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f0f0f0;
+  border-radius: 8px;
+  color: #666;
+  font-style: italic;
+}
+
+.product-details {
+  flex: 1; /* Take up available space on the right */
+  font-size: 1.2em;
+}
+
+.product-details p {
+  margin: 10px 0; /* Consistent spacing for details */
+}
+
+.error {
+  color: red;
+  font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  .order-details {
+    flex-direction: column;
+    align-items: center;
+  }
+  .product-image-container {
+    margin-right: 0;
+    margin-bottom: 20px;
+  }
+}

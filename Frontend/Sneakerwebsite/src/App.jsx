@@ -14,6 +14,8 @@ import men_banner from './Component/assets/banner_mens.png'
 import women_banner from './Component/assets/banner_women.png'
 import kid_banner from './Component/assets/banner_kids.png'
 import UserPanel from './Component/UserPanel/UserPanel';
+import PaymentSuccess from './Component/Payment/PaymentSuccess';
+import PaymentFailure from './Component/Payment/PaymentFailure';
 
 function App() {
   const [count, setCount] = useState(0);
@@ -36,6 +38,8 @@ function App() {
           <Route path='/favourite' element={<Favourite />} />
           <Route path='/login' element={<LoginSignup/>} />
           <Route path='/UserPanel' element={<UserPanel/>} />
+          <Route path="/payment-success" element={<PaymentSuccess />} />
+          <Route path="/payment-failure" element={<PaymentFailure />} />
         </Routes>
         <Footer />
       </BrowserRouter>

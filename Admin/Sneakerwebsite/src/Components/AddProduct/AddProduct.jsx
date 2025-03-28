@@ -7,9 +7,12 @@ const AddProduct = () => {
   const [productDetails, setProductDetails] = useState({
     name: "",
     image: "",
-    category: "Men",
+    category: "men",
+    brand: "",
     new_price: "",
-    description: ""
+    description: "",
+    sizes: "", // Comma-separated sizes
+    quantity: ""
   });
 
   const handleImageChange = (e) => {
@@ -26,6 +29,9 @@ const AddProduct = () => {
     console.log(productDetails);
     let responseData = null;
     let product = { ...productDetails };
+    product.sizes = product.sizes.split(',').map(size => parseInt(size.trim(), 10));
+    product.quantity = parseInt(product.quantity, 10);
+
     let formData = new FormData();
     formData.append('product', image);
 
@@ -50,7 +56,7 @@ const AddProduct = () => {
           },
           body: JSON.stringify(product),
         }).then((resp)=>resp.json()).then((data)=>{
-            data.success?alert("Product Added"):alert("Failed")
+            data.success ? alert("Product Added") : alert("Failed")
         })
       }
     } catch (error) {
@@ -68,6 +74,16 @@ const AddProduct = () => {
           type="text" 
           name='name' 
           placeholder='Type Here...' 
+        />
+      </div>
+      <div className="addproduct-itemfield">
+        <p>Brand</p>
+        <input 
+          value={productDetails.brand} 
+          onChange={handleInputChange} 
+          type="text" 
+          name='brand' 
+          placeholder='Enter brand name...' 
         />
       </div>
       <div className="addproduct-price">
@@ -102,6 +118,16 @@ const AddProduct = () => {
           onChange={handleInputChange} 
           name='description' 
           placeholder='Enter product description...'
+        />
+      </div>
+      <div className="addproduct-itemfield">
+        <p>Quantity</p>
+        <input
+          value={productDetails.quantity} 
+          onChange={handleInputChange} 
+          name='quantity' 
+          type='number'
+          placeholder='Enter available stock...'
         />
       </div>
       <div className="addproduct-itemfield">

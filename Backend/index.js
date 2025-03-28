@@ -1,4 +1,4 @@
-// Import dependencies
+// index.js
 const express = require('express');
 const multer = require('multer');
 const mongoose = require('mongoose');
@@ -6,7 +6,11 @@ const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
 const Jwt = require('jsonwebtoken');
-const { send } = require('process');
+const { initializeKhaltiPayment, verifyKhaltiPayment } = require('./khalti');
+const PurchasedItem = require('./purchasedItemModel');
+const Payment = require('./paymentModel');
+const Product = require('./models/Product');
+const connectDB = require('./connectDB');
 require('dotenv').config();
 
 // Initialize express app
@@ -14,16 +18,16 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Use CORS middleware to enable cross-origin requests
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173',
+  credentials: true,
+}));
 
 // Middleware to parse JSON bodies
 app.use(express.json());
 
-// Connect to MongoDB
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log('MongoDB connected'))
-  .catch((err) => console.error(err));
+// Connect to MongoDB using connectDB
+connectDB();
 
 // Ensure upload directory exists
 const uploadDir = './upload/images';
@@ -61,41 +65,6 @@ app.post('/upload', upload.single('product'), (req, res) => {
   });
 });
 
-// Product Schema and Model
-const ProductSchema = new mongoose.Schema({
-  id: {
-    type: Number,
-    required: true,
-    unique: true,
-  },
-  name: {
-    type: String,
-    required: true,
-  },
-  image: {
-    type: String,
-    required: true,
-  },
-  category: {
-    type: String,
-    required: true,
-  },
-  new_price: {
-    type: Number,
-    required: true,
-  },
-  date: {
-    type: Date,
-    default: Date.now,
-  },
-  available: {
-    type: Boolean,
-    default: true,
-  },
-});
-
-const Product = mongoose.model('Product', ProductSchema);
-
 // Add product endpoint
 app.post('/addproduct', async (req, res) => {
   try {
@@ -107,7 +76,10 @@ app.post('/addproduct', async (req, res) => {
       name: req.body.name,
       image: req.body.image,
       category: req.body.category,
+      brand: req.body.brand,
       new_price: req.body.new_price,
+      description: req.body.description,
+      quantity: req.body.quantity,
     });
 
     await newProduct.save();
@@ -164,34 +136,18 @@ app.get('/allproducts', async (req, res) => {
 const Users = mongoose.model(
   'Users',
   new mongoose.Schema({
-    name: {
-      type: String,
-    },
-    email: {
-      type: String,
-      unique: true,
-    },
-    password: {
-      type: String,
-      unique: true,
-    },
-    cartData: {
-      type: Object,
-    },
-    favoriteData: {
-      type: Object,
-    },
-    date: {
-      type: Date,
-      default: Date.now,
-    },
+    name: { type: String },
+    email: { type: String, unique: true },
+    password: { type: String, unique: true },
+    cartData: { type: Object },
+    favoriteData: { type: Object },
+    date: { type: Date, default: Date.now },
   })
 );
 
 // Create endpoint for registering a user
 app.post('/signup', async (req, res) => {
   try {
-    // Check if a user already exists with the same email
     let check = await Users.findOne({ email: req.body.email });
     if (check) {
       return res
@@ -199,18 +155,15 @@ app.post('/signup', async (req, res) => {
         .json({ success: false, errors: 'Existing user found with same email' });
     }
 
-    // Initialize cart data with 300 items set to 0
     let cart = {};
     for (let i = 0; i < 300; i++) {
       cart[i] = 0;
     }
-     // Initialize cart data with 300 items set to 0
-     let favorite = {};
-     for (let i = 0; i < 300; i++) {
-       favorite[i] = 0;
-     }
+    let favorite = {};
+    for (let i = 0; i < 300; i++) {
+      favorite[i] = 0;
+    }
 
-    // Create a new user with the matching schema field names
     const user = new Users({
       name: req.body.name,
       email: req.body.email,
@@ -221,9 +174,7 @@ app.post('/signup', async (req, res) => {
 
     await user.save();
     const data = {
-      user: {
-        id: user.id,
-      },
+      user: { id: user.id },
     };
     const token = Jwt.sign(data, 'secret_ecom');
     res.json({ success: true, token });
@@ -232,43 +183,40 @@ app.post('/signup', async (req, res) => {
   }
 });
 
-//endpoint for user login
+// Endpoint for user login
 app.post('/login', async (req, res) => {
-  let user = await Users.findOne({ email: req.body.email })
+  let user = await Users.findOne({ email: req.body.email });
   if (user) {
     const passCompare = req.body.password === user.password;
     if (passCompare) {
       const data = {
-        user: {
-          id: user.id
-        }
-      }
+        user: { id: user.id },
+      };
       const token = Jwt.sign(data, 'secret_ecom');
       res.json({ success: true, token });
-    }
-    else {
+    } else {
       res.json({ success: false, errors: "Wrong Passwords" });
     }
+  } else {
+    res.json({ success: false, errors: "Wrong Email Id" });
   }
-  else {
-    res.json({ success: false, errors: "Wrong Email Id" })
-  }
-})
-
-
+});
 
 // Middleware to verify JWT token
 const fetchUser = (req, res, next) => {
   const token = req.header('auth-token');
   if (!token) {
-    return res.status(401).json({ success: false, message: 'Access Denied' });
+    console.log('No token provided in request');
+    return res.status(401).json({ success: false, message: 'Access Denied: No token provided' });
   }
 
   try {
     const data = Jwt.verify(token, 'secret_ecom');
-    req.user = data.user; // Attach user info to the request object
+    req.user = data.user;
+    console.log('JWT Token Verified:', data);
     next();
   } catch (error) {
+    console.error('JWT Verification Error:', error.message);
     res.status(401).json({ success: false, message: 'Invalid Token' });
   }
 };
@@ -286,12 +234,11 @@ app.get('/getusername', fetchUser, async (req, res) => {
   }
 });
 
-
-//new collection end point for newcollection data
+// New collection endpoint for newcollection data
 app.get('/newcollections', async (req, res) => {
   try {
     const newCollection = await Product.aggregate([
-      { $sample: { size: 8 } } 
+      { $sample: { size: 8 } },
     ]);
 
     console.log("New Collection Fetched");
@@ -302,12 +249,12 @@ app.get('/newcollections', async (req, res) => {
   }
 });
 
-//popular endpoint
+// Popular endpoint
 app.get("/popular", async (req, res) => {
   try {
     const products = await Product.aggregate([
-      { $match: { category: { $in: ["men", "women", "kid"] } } }, // Filter by category
-      { $sample: { size: 4 } } 
+      { $match: { category: { $in: ["men", "women", "kid"] } } },
+      { $sample: { size: 4 } },
     ]);
 
     console.log("Random popular products fetched");
@@ -318,64 +265,63 @@ app.get("/popular", async (req, res) => {
   }
 });
 
-//creating middleware to fetch user
-const fetchuser = async(req,res,next)=>{
+// Middleware to fetch user (alternative version)
+const fetchuser = async (req, res, next) => {
   const token = req.header('auth-token');
-  if(!token){
-    res.status(401).send({errors:"Please authenticate using valide token"})
-  }
-  else{
-    try{
-      const data = Jwt.verify(token,'secret_ecom');
-      req.user= data.user;
+  if (!token) {
+    res.status(401).send({ errors: "Please authenticate using valid token" });
+  } else {
+    try {
+      const data = Jwt.verify(token, 'secret_ecom');
+      req.user = data.user;
       next();
-    }catch(error){
-      res.status(401).send({errors:"Please authenticate using valide token"})
+    } catch (error) {
+      res.status(401).send({ errors: "Please authenticate using valid token" });
     }
   }
-}
+};
 
-//endpoint for adding products in cart
-app.post('/AddToCart',fetchuser, async(req,res)=>{
-  console.log("added",req.body.itemId)
-  let userData = await Users.findOne({_id:req.user.id})
+// Endpoint for adding products to cart
+app.post('/AddToCart', fetchuser, async (req, res) => {
+  console.log("added", req.body.itemId);
+  let userData = await Users.findOne({ _id: req.user.id });
   userData.cartData[req.body.itemId] += 1;
-  await Users.findOneAndUpdate({_id:req.user.id},{cartData:userData.cartData})
-  res.send("Added")
-})
+  await Users.findOneAndUpdate({ _id: req.user.id }, { cartData: userData.cartData });
+  res.send("Added");
+});
 
-//endpoint for removing products in cart
+// Endpoint for removing products from cart
 app.post('/RemoveCart', fetchuser, async (req, res) => {
   try {
-      console.log("Removed:", req.body.itemId);
-      let userData = await Users.findOne({ _id: req.user.id });
-      if (userData.cartData[req.body.itemId] && userData.cartData[req.body.itemId] > 0) {
-          userData.cartData[req.body.itemId] -= 1;
-          if (userData.cartData[req.body.itemId] === 0) {
-              delete userData.cartData[req.body.itemId];
-          }
-          await Users.findOneAndUpdate(
-              { _id: req.user.id },
-              { cartData: userData.cartData },
-              { new: true } 
-          );
-
-          return res.json({ message: "Item removed", cartData: userData.cartData });
-      } else {
-          return res.status(400).json({ error: "Item not found in cart or already at 0" });
+    console.log("Removed:", req.body.itemId);
+    let userData = await Users.findOne({ _id: req.user.id });
+    if (userData.cartData[req.body.itemId] && userData.cartData[req.body.itemId] > 0) {
+      userData.cartData[req.body.itemId] -= 1;
+      if (userData.cartData[req.body.itemId] === 0) {
+        delete userData.cartData[req.body.itemId];
       }
+      await Users.findOneAndUpdate(
+        { _id: req.user.id },
+        { cartData: userData.cartData },
+        { new: true }
+      );
+
+      return res.json({ message: "Item removed", cartData: userData.cartData });
+    } else {
+      return res.status(400).json({ error: "Item not found in cart or already at 0" });
+    }
   } catch (error) {
-      console.error("Error in RemoveCart:", error);
-      res.status(500).json({ error: "Internal Server Error" });
+    console.error("Error in RemoveCart:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-//endpoint to get cartdata
-app.post('/getcart',fetchuser,async(req,res)=>{
-  console.log("GetCart")
-  let userData = await Users.findOne({_id:req.user.id})
-  res.json(userData.cartData)
-})
+// Endpoint to get cart data
+app.post('/getcart', fetchuser, async (req, res) => {
+  console.log("GetCart");
+  let userData = await Users.findOne({ _id: req.user.id });
+  res.json(userData.cartData);
+});
 
 // Endpoint for adding products to favourites
 app.post('/AddToFavourite', fetchuser, async (req, res) => {
@@ -383,12 +329,11 @@ app.post('/AddToFavourite', fetchuser, async (req, res) => {
     console.log("Added to Favourite:", req.body.itemId);
     let userData = await Users.findOne({ _id: req.user.id });
 
-    // Increase favourite count
     userData.favoriteData[req.body.itemId] += 1;
     await Users.findOneAndUpdate(
       { _id: req.user.id },
       { favoriteData: userData.favoriteData },
-      { new: true } // Return updated document
+      { new: true }
     );
 
     res.json({ message: "Added to Favourite", favoriteData: userData.favoriteData });
@@ -438,6 +383,174 @@ app.post('/getfavourite', fetchuser, async (req, res) => {
   }
 });
 
+app.post('/initialize-khalti', fetchUser, async (req, res) => {
+  try {
+    console.log('Received request to /initialize-khalti:', req.body);
+    const { productId, totalPrice, quantity, size } = req.body;
+
+    // Validate request body
+    if (!productId || !totalPrice || !quantity || !size) {
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({ success: false, message: 'Invalid product ID' });
+    }
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+
+    const calculatedTotalPrice = product.new_price * quantity;
+    if (calculatedTotalPrice !== totalPrice) {
+      return res.status(400).json({
+        success: false,
+        message: 'Total price mismatch',
+        expected: calculatedTotalPrice,
+        received: totalPrice,
+      });
+    }
+
+    // Create a purchased item record with productImage
+    const purchasedItem = await PurchasedItem.create({
+      product: productId,
+      totalPrice: totalPrice * 100, // Convert to paisa
+      quantity,
+      size,
+      productImage: product.image, // Copy image from Product
+      paymentMethod: 'khalti',
+    });
+
+    const user = await Users.findById(req.user.id).select('name email');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const paymentDetails = {
+      amount: totalPrice * 100,
+      purchase_order_id: purchasedItem._id.toString(),
+      purchase_order_name: product.name,
+      return_url: `${process.env.BACKEND_URI}/complete-khalti-payment`,
+      website_url: process.env.FRONTEND_URL || 'http://localhost:5173',
+      customer_info: {
+        name: user.name || 'Customer',
+        email: user.email || 'customer@example.com',
+        phone: '9800000000',
+      },
+    };
+
+    const paymentInitiate = await initializeKhaltiPayment(paymentDetails);
+
+    // Store order details in localStorage (optional, for fallback)
+    const orderDetails = {
+      productName: product.name,
+      quantity,
+      size,
+      totalPrice,
+      productImage: product.image,
+    };
+    res.json({
+      success: true,
+      purchasedItem,
+      payment: paymentInitiate,
+      orderDetails, // Send to frontend for localStorage
+    });
+  } catch (error) {
+    console.error('Error in /initialize-khalti:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error initializing payment',
+      error: error.message,
+    });
+  }
+});
+
+// Verify Khalti Payment
+app.get('/complete-khalti-payment', async (req, res) => {
+  const { pidx, transaction_id, amount, purchase_order_id, status } = req.query;
+
+  try {
+    if (status === 'failed') {
+      return res.redirect(`${process.env.FRONTEND_URL}/payment-failure?reason=insufficient_balance`);
+    }
+
+    const paymentInfo = await verifyKhaltiPayment(pidx);
+
+    if (
+      paymentInfo.status !== 'Completed' ||
+      paymentInfo.transaction_id !== transaction_id ||
+      Number(paymentInfo.total_amount) !== Number(amount)
+    ) {
+      return res.redirect(`${process.env.FRONTEND_URL}/payment-failure?reason=verification_failed`);
+    }
+
+    const purchasedItem = await PurchasedItem.findById(purchase_order_id);
+    if (!purchasedItem || purchasedItem.totalPrice !== Number(amount)) {
+      return res.redirect(
+        `${process.env.FRONTEND_URL}/payment-failure?reason=purchased_item_not_found_or_amount_mismatch`
+      );
+    }
+
+    await PurchasedItem.findByIdAndUpdate(purchase_order_id, { status: 'completed' });
+
+    // Create Payment with productImage from PurchasedItem
+    const payment = await Payment.create({
+      transactionId: transaction_id,
+      pidx,
+      purchasedItemId: purchasedItem._id,
+      amount: Number(amount),
+      productImage: purchasedItem.productImage, // Copy from PurchasedItem
+      dataFromVerificationReq: paymentInfo,
+      apiQueryFromUser: req.query,
+      paymentGateway: 'khalti',
+      status: 'success',
+    });
+
+    // Store order details in localStorage (optional)
+    const orderDetails = {
+      productName: (await Product.findById(purchasedItem.product)).name,
+      quantity: purchasedItem.quantity,
+      size: purchasedItem.size,
+      totalPrice: purchasedItem.totalPrice / 100, // Convert back to rupees
+      productImage: purchasedItem.productImage,
+    };
+    // Note: localStorage can't be set server-side; this must be done client-side
+
+    res.redirect(`${process.env.FRONTEND_URL}/payment-success?transaction_id=${transaction_id}`);
+  } catch (error) {
+    console.error('Error verifying Khalti payment:', error);
+    res.redirect(`${process.env.FRONTEND_URL}/payment-failure?reason=server_error`);
+  }
+});
+
+// New endpoint to fetch payment details
+app.get('/api/payments/:transactionId', async (req, res) => {
+  try {
+    const payment = await Payment.findOne({ transactionId: req.params.transactionId })
+      .populate({
+        path: 'purchasedItemId',
+        populate: { path: 'product', select: 'name image' },
+      });
+
+    if (!payment) {
+      return res.status(404).json({ success: false, message: 'Payment not found' });
+    }
+
+    const orderDetails = {
+      productName: payment.purchasedItemId.product.name,
+      quantity: payment.purchasedItemId.quantity,
+      size: payment.purchasedItemId.size,
+      totalPrice: payment.amount / 100, // Convert back to rupees
+      productImage: payment.productImage, // Use Payment's productImage
+    };
+
+    res.json({ success: true, payment, orderDetails });
+  } catch (error) {
+    console.error('Error fetching payment details:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
 // Start server
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

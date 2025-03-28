@@ -1,0 +1,46 @@
+/* src/pages/PaymentFailure.css */
+.payment-failure {
+  text-align: center;
+  padding: 50px;
+  font-family: Arial, sans-serif;
+}
+
+.payment-failure h1 {
+  color: #dc3545;
+  font-size: 2.5em;
+  margin-bottom: 20px;
+}
+
+.payment-failure p {
+  font-size: 1.2em;
+  margin: 10px 0;
+}
+
+.payment-failure-actions {
+  margin-top: 20px;
+}
+
+.payment-failure-actions a {
+  display: inline-block;
+  padding: 10px 20px;
+  margin: 0 10px;
+  color: white;
+  text-decoration: none;
+  border-radius: 5px;
+}
+
+.retry-btn {
+  background-color: #007bff;
+}
+
+.retry-btn:hover {
+  background-color: #0056b3;
+}
+
+.home-btn {
+  background-color: #6c757d;
+}
+
+.home-btn:hover {
+  background-color: #5a6268;
+}

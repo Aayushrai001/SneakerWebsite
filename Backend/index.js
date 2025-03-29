@@ -1,4 +1,3 @@
-// index.js
 const express = require('express');
 const multer = require('multer');
 const mongoose = require('mongoose');
@@ -386,23 +385,41 @@ app.post('/getfavourite', fetchuser, async (req, res) => {
 app.post('/initialize-khalti', fetchUser, async (req, res) => {
   try {
     console.log('Received request to /initialize-khalti:', req.body);
-    const { productId, totalPrice, quantity, size } = req.body;
+    const { cartItems, totalPrice } = req.body;
 
-    // Validate request body
-    if (!productId || !totalPrice || !quantity || !size) {
+    if (!cartItems || !totalPrice) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
-    if (!mongoose.Types.ObjectId.isValid(productId)) {
-      return res.status(400).json({ success: false, message: 'Invalid product ID' });
+    const user = await Users.findById(req.user.id).select('name email');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    const product = await Product.findById(productId);
-    if (!product) {
-      return res.status(404).json({ success: false, message: 'Product not found' });
+    const purchasedItems = [];
+    let calculatedTotalPrice = 0;
+
+    // Create purchased items and calculate total price
+    for (const item of cartItems) {
+      const product = await Product.findById(item.productId);
+      if (!product) {
+        return res.status(404).json({ success: false, message: `Product not found: ${item.productId}` });
+      }
+
+      const itemTotalPrice = product.new_price * item.quantity;
+      calculatedTotalPrice += itemTotalPrice;
+
+      const purchasedItem = await PurchasedItem.create({
+        product: item.productId,
+        totalPrice: itemTotalPrice * 100, // Convert to paisa
+        quantity: item.quantity,
+        size: item.size || 'N/A', // Default size if not provided
+        productImage: product.image,
+        paymentMethod: 'khalti',
+      });
+      purchasedItems.push(purchasedItem);
     }
 
-    const calculatedTotalPrice = product.new_price * quantity;
     if (calculatedTotalPrice !== totalPrice) {
       return res.status(400).json({
         success: false,
@@ -412,25 +429,10 @@ app.post('/initialize-khalti', fetchUser, async (req, res) => {
       });
     }
 
-    // Create a purchased item record with productImage
-    const purchasedItem = await PurchasedItem.create({
-      product: productId,
-      totalPrice: totalPrice * 100, // Convert to paisa
-      quantity,
-      size,
-      productImage: product.image, // Copy image from Product
-      paymentMethod: 'khalti',
-    });
-
-    const user = await Users.findById(req.user.id).select('name email');
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-
     const paymentDetails = {
       amount: totalPrice * 100,
-      purchase_order_id: purchasedItem._id.toString(),
-      purchase_order_name: product.name,
+      purchase_order_id: purchasedItems[0]._id.toString(), // Use first item's ID for simplicity
+      purchase_order_name: 'Cart/Favourite Purchase',
       return_url: `${process.env.BACKEND_URI}/complete-khalti-payment`,
       website_url: process.env.FRONTEND_URL || 'http://localhost:5173',
       customer_info: {
@@ -442,19 +444,25 @@ app.post('/initialize-khalti', fetchUser, async (req, res) => {
 
     const paymentInitiate = await initializeKhaltiPayment(paymentDetails);
 
-    // Store order details in localStorage (optional, for fallback)
-    const orderDetails = {
-      productName: product.name,
-      quantity,
-      size,
-      totalPrice,
-      productImage: product.image,
-    };
+    // Fetch product names for order details using Promise.all to handle async operations
+    const orderDetails = await Promise.all(
+      purchasedItems.map(async (item) => {
+        const product = await Product.findById(item.product); // Fetch product details
+        return {
+          productName: product.name,
+          quantity: item.quantity,
+          size: item.size,
+          totalPrice: item.totalPrice / 100, // Convert back to rupees
+          productImage: item.productImage,
+        };
+      })
+    );
+
     res.json({
       success: true,
-      purchasedItem,
+      purchasedItems,
       payment: paymentInitiate,
-      orderDetails, // Send to frontend for localStorage
+      orderDetails,
     });
   } catch (error) {
     console.error('Error in /initialize-khalti:', error);
@@ -466,7 +474,7 @@ app.post('/initialize-khalti', fetchUser, async (req, res) => {
   }
 });
 
-// Verify Khalti Payment
+// Verify Khalti Payment and Remove from Favorites
 app.get('/complete-khalti-payment', async (req, res) => {
   const { pidx, transaction_id, amount, purchase_order_id, status } = req.query;
 
@@ -500,22 +508,37 @@ app.get('/complete-khalti-payment', async (req, res) => {
       pidx,
       purchasedItemId: purchasedItem._id,
       amount: Number(amount),
-      productImage: purchasedItem.productImage, // Copy from PurchasedItem
+      productImage: purchasedItem.productImage,
       dataFromVerificationReq: paymentInfo,
       apiQueryFromUser: req.query,
       paymentGateway: 'khalti',
       status: 'success',
     });
 
-    // Store order details in localStorage (optional)
+    // Fetch the product associated with the purchased item
+    const product = await Product.findById(purchasedItem.product);
+    const itemId = product.id; // Use the product's numeric ID (not MongoDB _id)
+
+    // Remove the purchased item from user's favoriteData
+    const user = await Users.findOne({ 'favoriteData': { $exists: true } }); // Find user (assuming single user for simplicity)
+    if (user && user.favoriteData[itemId] && user.favoriteData[itemId] > 0) {
+      user.favoriteData[itemId] = 0; // Set quantity to 0
+      delete user.favoriteData[itemId]; // Remove the key entirely
+      await Users.findOneAndUpdate(
+        { _id: user._id },
+        { favoriteData: user.favoriteData },
+        { new: true }
+      );
+      console.log(`Removed item ${itemId} from favorites for user ${user._id}`);
+    }
+
     const orderDetails = {
-      productName: (await Product.findById(purchasedItem.product)).name,
+      productName: product.name,
       quantity: purchasedItem.quantity,
       size: purchasedItem.size,
       totalPrice: purchasedItem.totalPrice / 100, // Convert back to rupees
       productImage: purchasedItem.productImage,
     };
-    // Note: localStorage can't be set server-side; this must be done client-side
 
     res.redirect(`${process.env.FRONTEND_URL}/payment-success?transaction_id=${transaction_id}`);
   } catch (error) {
@@ -542,7 +565,7 @@ app.get('/api/payments/:transactionId', async (req, res) => {
       quantity: payment.purchasedItemId.quantity,
       size: payment.purchasedItemId.size,
       totalPrice: payment.amount / 100, // Convert back to rupees
-      productImage: payment.productImage, // Use Payment's productImage
+      productImage: payment.productImage,
     };
 
     res.json({ success: true, payment, orderDetails });
@@ -550,6 +573,16 @@ app.get('/api/payments/:transactionId', async (req, res) => {
     console.error('Error fetching payment details:', error);
     res.status(500).json({ success: false, message: error.message });
   }
+});
+
+app.post('/clearcart', fetchuser, async (req, res) => {
+  await Users.findOneAndUpdate({ _id: req.user.id }, { cartData: {} });
+  res.json({ message: "Cart cleared" });
+});
+
+app.post('/clearfavourite', fetchuser, async (req, res) => {
+  await Users.findOneAndUpdate({ _id: req.user.id }, { favoriteData: {} });
+  res.json({ message: "Favourites cleared" });
 });
 
 // Start server

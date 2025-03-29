@@ -11,21 +11,14 @@ const ShopContextProvider = (props) => {
     const [favouriteItems, setFavouriteItems] = useState(getDefaultFavourite());
 
     useEffect(() => {
-        // Fetch all products from the backend
         fetch("http://localhost:5000/allproducts")
             .then((response) => {
-                if (!response.ok) {
-                    throw new Error("Network response was not ok");
-                }
+                if (!response.ok) throw new Error("Network response was not ok");
                 return response.json();
             })
-            .then((data) => {
-                setAll_Product(data);
-                console.log("Fetched Products:", data);
-            })
+            .then((data) => setAll_Product(data))
             .catch((error) => console.error("Error fetching data:", error));
 
-        // Fetch cart data if the user is authenticated
         const authToken = localStorage.getItem("auth-token");
         if (authToken) {
             fetch("http://localhost:5000/getcart", {
@@ -38,13 +31,9 @@ const ShopContextProvider = (props) => {
                 body: JSON.stringify({}),
             })
                 .then((response) => response.json())
-                .then((data) => {
-                    setCartItems(data);
-                })
+                .then((data) => setCartItems(data))
                 .catch((error) => console.error("Error fetching cart data:", error));
-        }
 
-        if (authToken) {
             fetch("http://localhost:5000/getfavourite", {
                 method: "POST",
                 headers: {
@@ -55,9 +44,7 @@ const ShopContextProvider = (props) => {
                 body: JSON.stringify({}),
             })
                 .then((response) => response.json())
-                .then((data) => {
-                    setFavouriteItems(data);
-                })
+                .then((data) => setFavouriteItems(data))
                 .catch((error) => console.error("Error fetching favourite data:", error));
         }
     }, []);
@@ -67,7 +54,6 @@ const ShopContextProvider = (props) => {
             ...prev,
             [itemId]: (prev[itemId] || 0) + 1,
         }));
-
         const authToken = localStorage.getItem("auth-token");
         if (authToken) {
             fetch("http://localhost:5000/AddToCart", {
@@ -93,7 +79,6 @@ const ShopContextProvider = (props) => {
             if (updatedCart[itemId] === 0) delete updatedCart[itemId];
             return updatedCart;
         });
-
         const authToken = localStorage.getItem("auth-token");
         if (authToken) {
             fetch("http://localhost:5000/RemoveCart", {
@@ -109,6 +94,14 @@ const ShopContextProvider = (props) => {
                 .then((data) => console.log("Item removed from cart:", data))
                 .catch((error) => console.error("Error removing from cart:", error));
         }
+    };
+
+    const decreaseCartItem = (itemId) => {
+        removefromCart(itemId); // Already implemented
+    };
+
+    const increaseCartItem = (itemId) => {
+        addtoCart(itemId); // Already implemented
     };
 
     const getTotalCartAmount = () => {
@@ -127,7 +120,6 @@ const ShopContextProvider = (props) => {
             ...prev,
             [itemId]: (prev[itemId] || 0) + 1,
         }));
-
         const authToken = localStorage.getItem("auth-token");
         if (authToken) {
             fetch("http://localhost:5000/AddToFavourite", {
@@ -147,12 +139,12 @@ const ShopContextProvider = (props) => {
 
     const removefromFavourite = (itemId) => {
         setFavouriteItems((prev) => {
-            if (prev[itemId] > 0) {
-                return { ...prev, [itemId]: prev[itemId] - 1 };
-            }
-            return prev;
+            if (!prev[itemId] || prev[itemId] <= 0) return prev;
+            const updatedFavourite = { ...prev };
+            updatedFavourite[itemId] -= 1;
+            if (updatedFavourite[itemId] === 0) delete updatedFavourite[itemId];
+            return updatedFavourite;
         });
-
         const authToken = localStorage.getItem("auth-token");
         if (authToken) {
             fetch("http://localhost:5000/RemoveFavourite", {
@@ -170,16 +162,61 @@ const ShopContextProvider = (props) => {
         }
     };
 
+    const increaseFavouriteItem = (itemId) => {
+        addtoFavourite(itemId);
+    };
+
+    const decreaseFavouriteItem = (itemId) => {
+        removefromFavourite(itemId);
+    };
+
     const getTotalFavouriteItems = () => {
         return Object.values(favouriteItems).reduce((sum, count) => sum + (count || 0), 0);
     };
 
-    // function for Favourite Amount
     const getTotalFavouriteAmount = () => {
         return Object.entries(favouriteItems).reduce((total, [itemId, quantity]) => {
             const itemInfo = all_product.find((product) => product.id === Number(itemId));
             return itemInfo ? total + (itemInfo.new_price * quantity) : total;
         }, 0);
+    };
+
+    const clearCart = () => {
+        setCartItems(getDefaultCart());
+        const authToken = localStorage.getItem("auth-token");
+        if (authToken) {
+            fetch("http://localhost:5000/clearcart", {
+                method: "POST",
+                headers: {
+                    Accept: "application/json",
+                    "auth-token": authToken,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({}),
+            })
+                .then((response) => response.json())
+                .then((data) => console.log("Cart cleared:", data))
+                .catch((error) => console.error("Error clearing cart:", error));
+        }
+    };
+
+    const clearFavourites = () => {
+        setFavouriteItems(getDefaultFavourite());
+        const authToken = localStorage.getItem("auth-token");
+        if (authToken) {
+            fetch("http://localhost:5000/clearfavourite", {
+                method: "POST",
+                headers: {
+                    Accept: "application/json",
+                    "auth-token": authToken,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({}),
+            })
+                .then((response) => response.json())
+                .then((data) => console.log("Favourites cleared:", data))
+                .catch((error) => console.error("Error clearing favourites:", error));
+        }
     };
 
     const contextValue = {
@@ -194,6 +231,12 @@ const ShopContextProvider = (props) => {
         getTotalCartItems,
         getTotalFavouriteItems,
         getTotalFavouriteAmount,
+        decreaseCartItem,
+        increaseCartItem,
+        increaseFavouriteItem,
+        decreaseFavouriteItem,
+        clearCart,
+        clearFavourites,
     };
 
     return (

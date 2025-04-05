@@ -9,6 +9,7 @@ const { initializeKhaltiPayment, verifyKhaltiPayment } = require('./khalti');
 const PurchasedItem = require('./purchasedItemModel');
 const Payment = require('./paymentModel');
 const Product = require('./models/Product');
+const Review = require('./models/Review');
 const connectDB = require('./connectDB');
 require('dotenv').config();
 
@@ -16,33 +17,32 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Use CORS middleware to enable cross-origin requests
+// Define allowed origins
+const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174'];
+
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 
-// Middleware to parse JSON bodies
 app.use(express.json());
-
-// Connect to MongoDB using connectDB
 connectDB();
 
-// Ensure upload directory exists
 const uploadDir = './upload/images';
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Serve static images
 app.use('/images', express.static(uploadDir));
 
-// Default route
-app.get('/', (req, res) => {
-  res.send('MERN App is running!');
-});
+app.get('/', (req, res) => res.send('MERN App is running!'));
 
-// Image storage engine for multer
 const storage = multer.diskStorage({
   destination: uploadDir,
   filename: (req, file, cb) => {
@@ -52,19 +52,13 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// Upload endpoint
 app.post('/upload', upload.single('product'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ success: 0, message: 'No file uploaded' });
   }
-
-  res.json({
-    success: 1,
-    image_url: `http://localhost:${PORT}/images/${req.file.filename}`,
-  });
+  res.json({ success: 1, image_url: `http://localhost:${PORT}/images/${req.file.filename}` });
 });
 
-// Add product endpoint
 app.post('/addproduct', async (req, res) => {
   try {
     let products = await Product.find({});
@@ -82,428 +76,271 @@ app.post('/addproduct', async (req, res) => {
     });
 
     await newProduct.save();
-    res.status(201).json({
-      success: 1,
-      name: req.body.name,
-      message: 'Product added successfully',
-      product: newProduct,
-    });
+    res.status(201).json({ success: 1, name: req.body.name, message: 'Product added successfully', product: newProduct });
   } catch (error) {
-    res.status(500).json({
-      success: 0,
-      message: 'Error adding product',
-      error: error.message,
-    });
+    res.status(500).json({ success: 0, message: 'Error adding product', error: error.message });
   }
 });
 
-// Delete product endpoint
 app.post('/removeproduct', async (req, res) => {
   try {
     const removedProduct = await Product.findOneAndDelete({ id: req.body.id });
-    if (!removedProduct) {
-      return res.status(404).json({ success: 0, message: 'Product not found' });
-    }
-    console.log("Removed");
-    res.json({
-      success: true,
-      name: req.body.name,
-      message: 'Product removed successfully',
-      product: removedProduct,
-    });
+    if (!removedProduct) return res.status(404).json({ success: 0, message: 'Product not found' });
+    res.json({ success: true, name: req.body.name, message: 'Product removed successfully', product: removedProduct });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error deleting product',
-      error: error.message,
-    });
+    res.status(500).json({ success: false, message: 'Error deleting product', error: error.message });
   }
 });
 
-// Get all products endpoint
 app.get('/allproducts', async (req, res) => {
   try {
     let products = await Product.find({});
-    console.log("All Products");
     res.send(products);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// Users Schema and Model
-const Users = mongoose.model(
-  'Users',
-  new mongoose.Schema({
-    name: { type: String },
-    email: { type: String, unique: true },
-    password: { type: String, unique: true },
-    cartData: { type: Object },
-    favoriteData: { type: Object },
-    date: { type: Date, default: Date.now },
-  })
-);
+const Users = mongoose.model('Users', new mongoose.Schema({
+  name: { type: String },
+  email: { type: String, unique: true },
+  password: { type: String },
+  phone: { type: String },
+  address: { type: String },
+  cartData: { type: Object },
+  favoriteData: { type: Object },
+  date: { type: Date, default: Date.now },
+}));
 
-// Create endpoint for registering a user
-app.post('/signup', async (req, res) => {
-  try {
-    let check = await Users.findOne({ email: req.body.email });
-    if (check) {
-      return res
-        .status(400)
-        .json({ success: false, errors: 'Existing user found with same email' });
-    }
-
-    let cart = {};
-    for (let i = 0; i < 300; i++) {
-      cart[i] = 0;
-    }
-    let favorite = {};
-    for (let i = 0; i < 300; i++) {
-      favorite[i] = 0;
-    }
-
-    const user = new Users({
-      name: req.body.name,
-      email: req.body.email,
-      password: req.body.password,
-      cartData: cart,
-      favoriteData: favorite,
-    });
-
-    await user.save();
-    const data = {
-      user: { id: user.id },
-    };
-    const token = Jwt.sign(data, 'secret_ecom');
-    res.json({ success: true, token });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Endpoint for user login
-app.post('/login', async (req, res) => {
-  let user = await Users.findOne({ email: req.body.email });
-  if (user) {
-    const passCompare = req.body.password === user.password;
-    if (passCompare) {
-      const data = {
-        user: { id: user.id },
-      };
-      const token = Jwt.sign(data, 'secret_ecom');
-      res.json({ success: true, token });
-    } else {
-      res.json({ success: false, errors: "Wrong Passwords" });
-    }
-  } else {
-    res.json({ success: false, errors: "Wrong Email Id" });
-  }
-});
-
-// Middleware to verify JWT token
 const fetchUser = (req, res, next) => {
   const token = req.header('auth-token');
-  if (!token) {
-    console.log('No token provided in request');
-    return res.status(401).json({ success: false, message: 'Access Denied: No token provided' });
-  }
-
+  if (!token) return res.status(401).json({ success: false, message: 'Access Denied: No token provided' });
   try {
     const data = Jwt.verify(token, 'secret_ecom');
     req.user = data.user;
-    console.log('JWT Token Verified:', data);
     next();
   } catch (error) {
-    console.error('JWT Verification Error:', error.message);
     res.status(401).json({ success: false, message: 'Invalid Token' });
   }
 };
 
-// Fetch user name using JWT token
 app.get('/getusername', fetchUser, async (req, res) => {
   try {
     const user = await Users.findById(req.user.id).select('name');
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
     res.json({ success: true, name: user.name });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// New collection endpoint for newcollection data
+app.get('/user/details', fetchUser, async (req, res) => {
+  try {
+    const user = await Users.findById(req.user.id).select('-password -cartData -favoriteData');
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    res.json({ success: true, user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.put('/user/update', fetchUser, async (req, res) => {
+  try {
+    const { name, phone, address } = req.body;
+    const updatedUser = await Users.findByIdAndUpdate(
+      req.user.id,
+      { name, phone, address },
+      { new: true, select: '-password -cartData -favoriteData' }
+    );
+    if (!updatedUser) return res.status(404).json({ success: false, message: 'User not found' });
+    res.json({ success: true, user: updatedUser, message: 'User details updated successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.post('/signup', async (req, res) => {
+  try {
+    let check = await Users.findOne({ email: req.body.email });
+    if (check) return res.status(400).json({ success: false, errors: 'Existing user found with same email' });
+    let cart = {}; for (let i = 0; i < 300; i++) cart[i] = 0;
+    let favorite = {}; for (let i = 0; i < 300; i++) favorite[i] = 0;
+    const user = new Users({ name: req.body.name, email: req.body.email, password: req.body.password, cartData: cart, favoriteData: favorite });
+    await user.save();
+    const token = Jwt.sign({ user: { id: user.id } }, 'secret_ecom');
+    res.json({ success: true, token });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.post('/login', async (req, res) => {
+  let user = await Users.findOne({ email: req.body.email });
+  if (user && req.body.password === user.password) {
+    const token = Jwt.sign({ user: { id: user.id } }, 'secret_ecom');
+    res.json({ success: true, token });
+  } else {
+    res.json({ success: false, errors: user ? "Wrong Password" : "Wrong Email Id" });
+  }
+});
+
 app.get('/newcollections', async (req, res) => {
   try {
-    const newCollection = await Product.aggregate([
-      { $sample: { size: 8 } },
-    ]);
-
-    console.log("New Collection Fetched");
+    const newCollection = await Product.aggregate([{ $sample: { size: 8 } }]);
     res.json(newCollection);
   } catch (error) {
-    console.error("Error fetching new collections:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
 
-// Popular endpoint
 app.get("/popular", async (req, res) => {
   try {
-    const products = await Product.aggregate([
-      { $match: { category: { $in: ["men", "women", "kid"] } } },
-      { $sample: { size: 4 } },
-    ]);
-
-    console.log("Random popular products fetched");
+    const products = await Product.aggregate([{ $match: { category: { $in: ["men", "women", "kid"] } } }, { $sample: { size: 4 } }]);
     res.json(products);
   } catch (error) {
-    console.error("Error fetching popular products:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
 
-// Middleware to fetch user (alternative version)
 const fetchuser = async (req, res, next) => {
   const token = req.header('auth-token');
-  if (!token) {
+  if (!token) return res.status(401).send({ errors: "Please authenticate using valid token" });
+  try {
+    const data = Jwt.verify(token, 'secret_ecom');
+    req.user = data.user;
+    next();
+  } catch (error) {
     res.status(401).send({ errors: "Please authenticate using valid token" });
-  } else {
-    try {
-      const data = Jwt.verify(token, 'secret_ecom');
-      req.user = data.user;
-      next();
-    } catch (error) {
-      res.status(401).send({ errors: "Please authenticate using valid token" });
-    }
   }
 };
 
-// Endpoint for adding products to cart
 app.post('/AddToCart', fetchuser, async (req, res) => {
-  console.log("added", req.body.itemId);
   let userData = await Users.findOne({ _id: req.user.id });
   userData.cartData[req.body.itemId] += 1;
   await Users.findOneAndUpdate({ _id: req.user.id }, { cartData: userData.cartData });
   res.send("Added");
 });
 
-// Endpoint for removing products from cart
 app.post('/RemoveCart', fetchuser, async (req, res) => {
   try {
-    console.log("Removed:", req.body.itemId);
     let userData = await Users.findOne({ _id: req.user.id });
-    if (userData.cartData[req.body.itemId] && userData.cartData[req.body.itemId] > 0) {
+    if (userData.cartData[req.body.itemId] > 0) {
       userData.cartData[req.body.itemId] -= 1;
-      if (userData.cartData[req.body.itemId] === 0) {
-        delete userData.cartData[req.body.itemId];
-      }
-      await Users.findOneAndUpdate(
-        { _id: req.user.id },
-        { cartData: userData.cartData },
-        { new: true }
-      );
-
+      if (userData.cartData[req.body.itemId] === 0) delete userData.cartData[req.body.itemId];
+      await Users.findOneAndUpdate({ _id: req.user.id }, { cartData: userData.cartData });
       return res.json({ message: "Item removed", cartData: userData.cartData });
-    } else {
-      return res.status(400).json({ error: "Item not found in cart or already at 0" });
     }
+    res.status(400).json({ error: "Item not found in cart or already at 0" });
   } catch (error) {
-    console.error("Error in RemoveCart:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-// Endpoint to get cart data
 app.post('/getcart', fetchuser, async (req, res) => {
-  console.log("GetCart");
   let userData = await Users.findOne({ _id: req.user.id });
   res.json(userData.cartData);
 });
 
-// Endpoint for adding products to favourites
 app.post('/AddToFavourite', fetchuser, async (req, res) => {
   try {
-    console.log("Added to Favourite:", req.body.itemId);
     let userData = await Users.findOne({ _id: req.user.id });
-
     userData.favoriteData[req.body.itemId] += 1;
-    await Users.findOneAndUpdate(
-      { _id: req.user.id },
-      { favoriteData: userData.favoriteData },
-      { new: true }
-    );
-
+    await Users.findOneAndUpdate({ _id: req.user.id }, { favoriteData: userData.favoriteData });
     res.json({ message: "Added to Favourite", favoriteData: userData.favoriteData });
   } catch (error) {
-    console.error("Error adding to favourite:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-// Endpoint for removing products from favourites
 app.post('/RemoveFavourite', fetchuser, async (req, res) => {
   try {
-    console.log("Removed from Favourite:", req.body.itemId);
     let userData = await Users.findOne({ _id: req.user.id });
-
-    if (userData.favoriteData[req.body.itemId] && userData.favoriteData[req.body.itemId] > 0) {
+    if (userData.favoriteData[req.body.itemId] > 0) {
       userData.favoriteData[req.body.itemId] -= 1;
-      if (userData.favoriteData[req.body.itemId] === 0) {
-        delete userData.favoriteData[req.body.itemId];
-      }
-
-      await Users.findOneAndUpdate(
-        { _id: req.user.id },
-        { favoriteData: userData.favoriteData },
-        { new: true }
-      );
-
+      if (userData.favoriteData[req.body.itemId] === 0) delete userData.favoriteData[req.body.itemId];
+      await Users.findOneAndUpdate({ _id: req.user.id }, { favoriteData: userData.favoriteData });
       return res.json({ message: "Item removed from Favourite", favoriteData: userData.favoriteData });
-    } else {
-      return res.status(400).json({ error: "Item not found in favourites or already at 0" });
     }
+    res.status(400).json({ error: "Item not found in favourites or already at 0" });
   } catch (error) {
-    console.error("Error removing from favourite:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-// Endpoint to get favourite data
 app.post('/getfavourite', fetchuser, async (req, res) => {
-  try {
-    console.log("Get Favourite Data");
-    let userData = await Users.findOne({ _id: req.user.id });
-    res.json(userData.favoriteData);
-  } catch (error) {
-    console.error("Error fetching favourite data:", error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
+  let userData = await Users.findOne({ _id: req.user.id });
+  res.json(userData.favoriteData);
 });
 
 app.post('/initialize-khalti', fetchUser, async (req, res) => {
   try {
-    console.log('Received request to /initialize-khalti:', req.body);
     const { cartItems, totalPrice } = req.body;
-
-    if (!cartItems || !totalPrice) {
-      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    if (!cartItems || !totalPrice || !Array.isArray(cartItems)) {
+      return res.status(400).json({ success: false, message: 'Invalid request: cartItems and totalPrice required' });
     }
-
     const user = await Users.findById(req.user.id).select('name email');
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
     const purchasedItems = [];
     let calculatedTotalPrice = 0;
-
-    // Create purchased items and calculate total price
     for (const item of cartItems) {
-      const product = await Product.findById(item.productId);
-      if (!product) {
-        return res.status(404).json({ success: false, message: `Product not found: ${item.productId}` });
+      if (!item.productId || !item.quantity) {
+        return res.status(400).json({ success: false, message: 'Each item must have productId and quantity' });
       }
-
+      const product = await Product.findById(item.productId);
+      if (!product) return res.status(404).json({ success: false, message: `Product not found: ${item.productId}` });
       const itemTotalPrice = product.new_price * item.quantity;
       calculatedTotalPrice += itemTotalPrice;
-
       const purchasedItem = await PurchasedItem.create({
+        user: req.user.id,
         product: item.productId,
-        totalPrice: itemTotalPrice * 100, // Convert to paisa
+        totalPrice: itemTotalPrice * 100,
         quantity: item.quantity,
-        size: item.size || 'N/A', // Default size if not provided
+        size: item.size || 'N/A',
         productImage: product.image,
         paymentMethod: 'khalti',
       });
       purchasedItems.push(purchasedItem);
     }
-
     if (calculatedTotalPrice !== totalPrice) {
-      return res.status(400).json({
-        success: false,
-        message: 'Total price mismatch',
-        expected: calculatedTotalPrice,
-        received: totalPrice,
-      });
+      return res.status(400).json({ success: false, message: 'Total price mismatch' });
     }
-
     const paymentDetails = {
       amount: totalPrice * 100,
-      purchase_order_id: purchasedItems[0]._id.toString(), // Use first item's ID for simplicity
+      purchase_order_id: purchasedItems[0]._id.toString(),
       purchase_order_name: 'Cart/Favourite Purchase',
       return_url: `${process.env.BACKEND_URI}/complete-khalti-payment`,
       website_url: process.env.FRONTEND_URL || 'http://localhost:5173',
-      customer_info: {
-        name: user.name || 'Customer',
-        email: user.email || 'customer@example.com',
-        phone: '9800000000',
-      },
+      customer_info: { name: user.name || 'Customer', email: user.email || 'customer@example.com', phone: '9800000000' },
     };
-
     const paymentInitiate = await initializeKhaltiPayment(paymentDetails);
-
-    // Fetch product names for order details using Promise.all to handle async operations
     const orderDetails = await Promise.all(
       purchasedItems.map(async (item) => {
-        const product = await Product.findById(item.product); // Fetch product details
-        return {
-          productName: product.name,
-          quantity: item.quantity,
-          size: item.size,
-          totalPrice: item.totalPrice / 100, // Convert back to rupees
-          productImage: item.productImage,
-        };
+        const product = await Product.findById(item.product);
+        return { productName: product.name, quantity: item.quantity, size: item.size, totalPrice: item.totalPrice / 100, productImage: item.productImage };
       })
     );
-
-    res.json({
-      success: true,
-      purchasedItems,
-      payment: paymentInitiate,
-      orderDetails,
-    });
+    res.json({ success: true, purchasedItems, payment: paymentInitiate, orderDetails });
   } catch (error) {
-    console.error('Error in /initialize-khalti:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error initializing payment',
-      error: error.message,
-    });
+    res.status(500).json({ success: false, message: 'Error initializing payment', error: error.message });
   }
 });
 
-// Verify Khalti Payment and Remove from Favorites
 app.get('/complete-khalti-payment', async (req, res) => {
   const { pidx, transaction_id, amount, purchase_order_id, status } = req.query;
-
   try {
-    if (status === 'failed') {
-      return res.redirect(`${process.env.FRONTEND_URL}/payment-failure?reason=insufficient_balance`);
-    }
-
+    if (status === 'failed') return res.redirect(`${process.env.FRONTEND_URL}/payment-failure?reason=insufficient_balance`);
     const paymentInfo = await verifyKhaltiPayment(pidx);
-
-    if (
-      paymentInfo.status !== 'Completed' ||
-      paymentInfo.transaction_id !== transaction_id ||
-      Number(paymentInfo.total_amount) !== Number(amount)
-    ) {
+    if (paymentInfo.status !== 'Completed' || paymentInfo.transaction_id !== transaction_id || Number(paymentInfo.total_amount) !== Number(amount)) {
       return res.redirect(`${process.env.FRONTEND_URL}/payment-failure?reason=verification_failed`);
     }
-
     const purchasedItem = await PurchasedItem.findById(purchase_order_id);
     if (!purchasedItem || purchasedItem.totalPrice !== Number(amount)) {
-      return res.redirect(
-        `${process.env.FRONTEND_URL}/payment-failure?reason=purchased_item_not_found_or_amount_mismatch`
-      );
+      return res.redirect(`${process.env.FRONTEND_URL}/payment-failure?reason=purchased_item_not_found_or_amount_mismatch`);
     }
-
-    await PurchasedItem.findByIdAndUpdate(purchase_order_id, { status: 'completed' });
-
-    // Create Payment with productImage from PurchasedItem
+    await PurchasedItem.findByIdAndUpdate(purchase_order_id, { payment: 'completed' });
     const payment = await Payment.create({
+      user: purchasedItem.user,
       transactionId: transaction_id,
       pidx,
       purchasedItemId: purchasedItem._id,
@@ -514,63 +351,26 @@ app.get('/complete-khalti-payment', async (req, res) => {
       paymentGateway: 'khalti',
       status: 'success',
     });
-
-    // Fetch the product associated with the purchased item
-    const product = await Product.findById(purchasedItem.product);
-    const itemId = product.id; // Use the product's numeric ID (not MongoDB _id)
-
-    // Remove the purchased item from user's favoriteData
-    const user = await Users.findOne({ 'favoriteData': { $exists: true } }); // Find user (assuming single user for simplicity)
-    if (user && user.favoriteData[itemId] && user.favoriteData[itemId] > 0) {
-      user.favoriteData[itemId] = 0; // Set quantity to 0
-      delete user.favoriteData[itemId]; // Remove the key entirely
-      await Users.findOneAndUpdate(
-        { _id: user._id },
-        { favoriteData: user.favoriteData },
-        { new: true }
-      );
-      console.log(`Removed item ${itemId} from favorites for user ${user._id}`);
-    }
-
-    const orderDetails = {
-      productName: product.name,
-      quantity: purchasedItem.quantity,
-      size: purchasedItem.size,
-      totalPrice: purchasedItem.totalPrice / 100, // Convert back to rupees
-      productImage: purchasedItem.productImage,
-    };
-
     res.redirect(`${process.env.FRONTEND_URL}/payment-success?transaction_id=${transaction_id}`);
   } catch (error) {
-    console.error('Error verifying Khalti payment:', error);
     res.redirect(`${process.env.FRONTEND_URL}/payment-failure?reason=server_error`);
   }
 });
 
-// New endpoint to fetch payment details
 app.get('/api/payments/:transactionId', async (req, res) => {
   try {
     const payment = await Payment.findOne({ transactionId: req.params.transactionId })
-      .populate({
-        path: 'purchasedItemId',
-        populate: { path: 'product', select: 'name image' },
-      });
-
-    if (!payment) {
-      return res.status(404).json({ success: false, message: 'Payment not found' });
-    }
-
+      .populate({ path: 'purchasedItemId', populate: { path: 'product', select: 'name image' } });
+    if (!payment) return res.status(404).json({ success: false, message: 'Payment not found' });
     const orderDetails = {
       productName: payment.purchasedItemId.product.name,
       quantity: payment.purchasedItemId.quantity,
       size: payment.purchasedItemId.size,
-      totalPrice: payment.amount / 100, // Convert back to rupees
+      totalPrice: payment.amount / 100,
       productImage: payment.productImage,
     };
-
     res.json({ success: true, payment, orderDetails });
   } catch (error) {
-    console.error('Error fetching payment details:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -585,5 +385,129 @@ app.post('/clearfavourite', fetchuser, async (req, res) => {
   res.json({ message: "Favourites cleared" });
 });
 
-// Start server
+app.get('/user/orders', fetchUser, async (req, res) => {
+  try {
+    const orders = await PurchasedItem.find({ user: req.user.id })
+      .populate('product', 'name image');
+    res.json({ success: true, orders });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.get('/user/reviews', fetchUser, async (req, res) => {
+  try {
+    const reviews = await Review.find({ user: req.user.id })
+      .populate('product', 'name image')
+      .sort({ date: -1 });
+    res.json({ success: true, reviews });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.post('/user/review', fetchUser, async (req, res) => {
+  const { purchasedItemId, rating, feedback } = req.body;
+  try {
+    const purchasedItem = await PurchasedItem.findById(purchasedItemId).populate('product');
+    if (!purchasedItem) return res.status(400).json({ success: false, message: 'Invalid purchase' });
+    const existingReview = await Review.findOne({ user: req.user.id, purchasedItem: purchasedItemId });
+    if (existingReview) return res.status(400).json({ success: false, message: 'Review already submitted for this order' });
+    const review = new Review({ user: req.user.id, product: purchasedItem.product._id, purchasedItem: purchasedItemId, rating, feedback });
+    await review.save();
+    res.json({ success: true, message: 'Review submitted successfully', review });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.get('/admin/orders', async (req, res) => {
+  try {
+    const orders = await PurchasedItem.find()
+      .populate('user', 'name email')
+      .populate('product', 'name image');
+    res.json({ success: true, orders });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.put('/admin/update-order-status', async (req, res) => {
+  try {
+    const { orderId, payment, delivery } = req.body;
+
+    // Validate payment and delivery values
+    const validPayments = ['pending', 'completed', 'refunded'];
+    const validDeliveries = ['pending', 'delivered'];
+    if (!validPayments.includes(payment)) {
+      return res.status(400).json({ success: false, message: 'Invalid payment status' });
+    }
+    if (!validDeliveries.includes(delivery)) {
+      return res.status(400).json({ success: false, message: 'Invalid delivery status' });
+    }
+
+    const updatedOrder = await PurchasedItem.findByIdAndUpdate(
+      orderId,
+      { payment, delivery },
+      { new: true }
+    ).populate('user', 'name email')
+     .populate('product', 'name image');
+    
+    if (!updatedOrder) return res.status(404).json({ success: false, message: 'Order not found' });
+    
+    res.json({ success: true, order: updatedOrder });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.get('/admin/reviews', async (req, res) => {
+  try {
+    const reviews = await Review.find({ status: { $ne: 'Deleted' } })
+      .populate('user', 'name email')
+      .populate('product', 'name image')
+      .sort({ date: -1 });
+    res.json({ success: true, reviews });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.delete('/admin/review/:id', async (req, res) => {
+  try {
+    const review = await Review.findByIdAndUpdate(req.params.id, { status: 'Deleted' }, { new: true });
+    if (!review) return res.status(404).json({ success: false, message: 'Review not found' });
+    res.json({ success: true, message: 'Review marked as deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.put('/admin/review/status/:id', async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['Pending', 'Approved', 'Deleted'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status value' });
+    }
+    const review = await Review.findByIdAndUpdate(req.params.id, { status }, { new: true })
+      .populate('user', 'name email')
+      .populate('product', 'name image');
+    if (!review) return res.status(404).json({ success: false, message: 'Review not found' });
+    res.json({ success: true, review });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.get('/product/:productId/reviews', async (req, res) => {
+  try {
+    const reviews = await Review.find({ product: req.params.productId, status: 'Approved' })
+      .populate('user', 'name')
+      .sort({ date: -1 });
+    res.json({ success: true, reviews });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -11,7 +11,6 @@ const AddProduct = () => {
     brand: "",
     new_price: "",
     description: "",
-    sizes: "", // Comma-separated sizes
     quantity: ""
   });
 
@@ -26,41 +25,64 @@ const AddProduct = () => {
   };
 
   const addProduct = async () => {
-    console.log(productDetails);
-    let responseData = null;
     let product = { ...productDetails };
-    product.sizes = product.sizes.split(',').map(size => parseInt(size.trim(), 10));
     product.quantity = parseInt(product.quantity, 10);
+    product.new_price = parseFloat(product.new_price); // Ensure price is a number
+
+    // Validate required fields
+    if (!product.name || !product.brand || !product.new_price || !product.quantity || !image) {
+      alert("Please fill all required fields and upload an image.");
+      return;
+    }
 
     let formData = new FormData();
     formData.append('product', image);
 
     try {
+      // Step 1: Upload image
       const uploadResponse = await fetch('http://localhost:5000/upload', {
         method: 'POST',
         headers: { Accept: 'application/json' },
         body: formData,
       });
 
-      responseData = await uploadResponse.json();
-      
-      if (responseData && responseData.success) {
-        product.image = responseData.image_url;
-        console.log(product);
+      const responseData = await uploadResponse.json();
+      if (!responseData.success) {
+        throw new Error("Image upload failed");
+      }
 
-        await fetch('http://localhost:5000/addproduct', {
-          method: 'POST',
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(product),
-        }).then((resp)=>resp.json()).then((data)=>{
-            data.success ? alert("Product Added") : alert("Failed")
-        })
+      product.image = responseData.image_url;
+
+      // Step 2: Add product
+      const addResponse = await fetch('http://localhost:5000/addproduct', {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(product),
+      });
+
+      const addData = await addResponse.json();
+      if (addData.success) {
+        alert("Product Added Successfully");
+        // Reset form
+        setProductDetails({
+          name: "",
+          image: "",
+          category: "men",
+          brand: "",
+          new_price: "",
+          description: "",
+          quantity: ""
+        });
+        setImage(null);
+      } else {
+        alert("Failed to add product: " + (addData.message || "Unknown error"));
       }
     } catch (error) {
-      console.error("Error uploading product:", error);
+      console.error("Error adding product:", error);
+      alert("Error adding product: " + error.message);
     }
   };
 
@@ -92,7 +114,7 @@ const AddProduct = () => {
           <input 
             value={productDetails.new_price} 
             onChange={handleInputChange} 
-            type="text" 
+            type="number" 
             name='new_price' 
             placeholder='Type Here...' 
           />

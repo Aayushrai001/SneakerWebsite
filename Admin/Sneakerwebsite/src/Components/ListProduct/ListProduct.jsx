@@ -4,17 +4,22 @@ import cross_icon from '../../assets/cross_icon.png';
 
 const ListProduct = () => {
   const [allProducts, setAllProducts] = useState([]);
-  const [searchTerm, setSearchTerm] = useState(""); // Search input state
-  const [visibleProductsCount, setVisibleProductsCount] = useState(3); // State for showing 4 products initially
+  const [searchTerm, setSearchTerm] = useState("");
+  const [visibleProductsCount, setVisibleProductsCount] = useState(3);
+  const [error, setError] = useState(null); // Added error state
 
-  // Fetch products from API
   const fetchInfo = async () => {
     try {
       const res = await fetch('http://localhost:5000/allproducts');
+      if (!res.ok) {
+        throw new Error(`HTTP error! Status: ${res.status}`);
+      }
       const data = await res.json();
       setAllProducts(data);
+      setError(null); // Clear error on success
     } catch (error) {
       console.error("Error fetching products:", error);
+      setError("Failed to fetch products. Please try again later.");
     }
   };
 
@@ -22,52 +27,41 @@ const ListProduct = () => {
     fetchInfo();
   }, []);
 
-  // Function to remove a product
   const removeProduct = async (id) => {
     try {
       const response = await fetch('http://localhost:5000/removeproduct', {
-        method: 'POST', // Change to 'DELETE' if your backend expects it
+        method: 'POST',
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ id: id }) // Ensure backend expects this format
+        body: JSON.stringify({ id: id })
       });
 
       const data = await response.json();
-      console.log("Server Response:", data); // Debugging
-
       if (data.success) {
-        setAllProducts((prevProducts) =>
-          prevProducts.filter((product) => product.id !== id)
-        ); // Update UI after deletion
+        setAllProducts(prevProducts => prevProducts.filter(product => product.id !== id));
+        alert("Product removed successfully");
       } else {
-        console.error("Failed to delete product:", data.message);
+        alert("Failed to remove product: " + data.message);
       }
     } catch (error) {
       console.error("Error removing product:", error);
+      alert("Error removing product");
     }
   };
 
-  // Filter products based on search term
   const filteredProducts = allProducts.filter((product) =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Function to toggle between showing more or fewer products
   const toggleShowMore = () => {
-    if (visibleProductsCount === 3) {
-      setVisibleProductsCount(visibleProductsCount + 2); // Show 5 more products
-    } else {
-      setVisibleProductsCount(3); // Reset back to showing only 4 products
-    }
+    setVisibleProductsCount(prev => prev === 3 ? filteredProducts.length : 3);
   };
 
   return (
     <div className='list-product'>
       <h1>All Products List</h1>
-
-      {/* Search Bar */}
       <input
         type="text"
         placeholder="Search by product name..."
@@ -75,7 +69,7 @@ const ListProduct = () => {
         onChange={(e) => setSearchTerm(e.target.value)}
         className="listproduct-search"
       />
-
+      {error && <p className="error-message">{ quantitéerror}</p>} {/* Display error */}
       <div className="listproduct-format-main">
         <p>Product</p>
         <p>Name</p>
@@ -83,33 +77,33 @@ const ListProduct = () => {
         <p>Category</p>
         <p>Remove</p>
       </div>
-
       <div className="listproduct-allproducts">
         <hr />
         {filteredProducts.length > 0 ? (
-          filteredProducts.slice(0, visibleProductsCount).map((product, index) => (
-            <div key={index} className="listproduct-forrmat-main listproduct">
-              <img src={product.image} alt={product.name} className='listproduct-product-icon' />
-              <p>{product.name}</p>
-              <p>Rs.{product.new_price}</p>
-              <p>{product.category}</p>
-              <img 
-                onClick={() => removeProduct(product.id)} 
-                src={cross_icon} 
-                alt="Remove" 
-                className='listproduct-remove-icon' 
-              />
-            </div>
+          filteredProducts.slice(0, visibleProductsCount).map((product) => (
+            <React.Fragment key={product.id}>
+              <div className="listproduct-forrmat-main listproduct">
+                <img src={product.image} alt={product.name} className='listproduct-product-icon' />
+                <p>{product.name}</p>
+                <p>Rs.{product.new_price}</p>
+                <p>{product.category}</p>
+                <img 
+                  onClick={() => removeProduct(product.id)} 
+                  src={cross_icon} 
+                  alt="Remove" 
+                  className='listproduct-remove-icon' 
+                />
+              </div>
+              <hr />
+            </React.Fragment>
           ))
         ) : (
           <p className="no-products-message">No products found</p>
         )}
       </div>
-
-      {/* Toggle Show More / Show Less Button */}
-      {filteredProducts.length > visibleProductsCount && (
+      {filteredProducts.length > 3 && (
         <button onClick={toggleShowMore} className="see-more-btn">
-          {visibleProductsCount === 2 ? 'See More' : 'Show Less'}
+          {visibleProductsCount === 3 ? 'See More' : 'Show Less'}
         </button>
       )}
     </div>

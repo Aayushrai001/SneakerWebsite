@@ -1,39 +1,6 @@
 import React, { useState } from 'react';
 import './Reviews.css';
 
-// Sample data for user reviews
-const reviewsData = [
-  {
-    id: 1,
-    user: 'John Doe',
-    rating: 5,
-    review: 'These sneakers are amazing! Very comfortable and stylish.',
-  },
-  {
-    id: 2,
-    user: 'Jane Smith',
-    rating: 4,
-    review: 'Great sneakers, but they run a bit small. Consider sizing up.',
-  },
-  {
-    id: 3,
-    user: 'Alice Johnson',
-    rating: 3,
-    review: 'Decent quality, but the color faded after a few washes.',
-  },
-  {
-    id: 4,
-    user: 'Bob Brown',
-    rating: 2,
-    review: 'Not very durable. The sole wore out quickly.',
-  },
-  {
-    id: 5,
-    user: 'Charlie Green',
-    rating: 5,
-    review: 'Absolutely love these! Worth every penny.',
-  },
-];
 
 const Reviews = () => {
   const [visibleReviews, setVisibleReviews] = useState(3);

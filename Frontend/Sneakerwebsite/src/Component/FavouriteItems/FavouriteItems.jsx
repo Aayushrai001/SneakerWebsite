@@ -19,48 +19,51 @@ const FavouriteItems = () => {
     };
 
     const handleKhaltiPayment = async () => {
-        const token = localStorage.getItem('auth-token');
+        const token = localStorage.getItem("auth-token");
         if (!token) {
-            alert('Please log in to proceed with payment');
+            alert("Please log in to proceed with payment");
             return;
         }
-
+    
         const favouriteProducts = all_product.filter(item => favouriteItems[item.id] > 0);
         const orderDetails = favouriteProducts.map(product => ({
             productId: product._id,
             productName: product.name,
             quantity: favouriteItems[product.id],
-            size: sizes[product.id] || 'Not selected',
+            size: sizes[product.id] || "Not selected",
             totalPrice: product.new_price * favouriteItems[product.id],
             productImage: product.image,
         }));
-
-        localStorage.setItem('lastOrder', JSON.stringify(orderDetails));
-
+    
+        localStorage.setItem("lastOrder", JSON.stringify(orderDetails));
+    
         try {
             const response = await axios.post(
-              'http://localhost:5000/initialize-khalti',
-              {
-                cartItems: Object.entries(favouriteItems).filter(([_, qty]) => qty > 0).map(([id, quantity]) => ({
-                  productId: all_product.find(p => p.id === Number(id))?._id,
-                  quantity,
-                  totalPrice: all_product.find(p => p.id === Number(id)).new_price * quantity,
-                  size: sizes[id] || 'N/A',
-                })),
-                totalPrice: getTotalFavouriteAmount(),
-              },
-              { headers: { 'auth-token': token } }
+                "http://localhost:5000/initialize-khalti",
+                {
+                    cartItems: Object.entries(favouriteItems)
+                        .filter(([_, qty]) => qty > 0)
+                        .map(([id, quantity]) => ({
+                            productId: all_product.find(p => p.id === Number(id))?._id,
+                            quantity,
+                            totalPrice: all_product.find(p => p.id === Number(id)).new_price * quantity,
+                            size: sizes[id] || "N/A",
+                        })),
+                    totalPrice: getTotalFavouriteAmount(),
+                },
+                { headers: { "auth-token": token } }
             );
-        
+    
             if (response.data.success) {
-              window.location.href = response.data.payment.payment_url;
+                window.location.href = response.data.payment.payment_url;
+                clearFavourite(); // Clear favourites after successful payment
             } else {
-              alert('Failed to initialize payment: ' + (response.data.message || 'Unknown error'));
+                alert("Failed to initialize payment: " + (response.data.message || "Unknown error"));
             }
-          } catch (error) {
+        } catch (error) {
             alert(`Payment Error: ${error.response?.data?.message || error.message}`);
-          }
-        };
+        }
+    };
 
     return (
         <div className='cartitems'>

@@ -200,7 +200,7 @@ const ShopContextProvider = (props) => {
         }
     };
 
-    const clearFavourites = () => {
+    const clearFavourite = () => {
         setFavouriteItems(getDefaultFavourite());
         const authToken = localStorage.getItem("auth-token");
         if (authToken) {
@@ -236,7 +236,7 @@ const ShopContextProvider = (props) => {
         increaseFavouriteItem,
         decreaseFavouriteItem,
         clearCart,
-        clearFavourites,
+        clearFavourite,
     };
 
     return (

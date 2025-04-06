@@ -202,26 +202,14 @@ app.get("/popular", async (req, res) => {
   }
 });
 
-const fetchuser = async (req, res, next) => {
-  const token = req.header('auth-token');
-  if (!token) return res.status(401).send({ errors: "Please authenticate using valid token" });
-  try {
-    const data = Jwt.verify(token, 'secret_ecom');
-    req.user = data.user;
-    next();
-  } catch (error) {
-    res.status(401).send({ errors: "Please authenticate using valid token" });
-  }
-};
-
-app.post('/AddToCart', fetchuser, async (req, res) => {
+app.post('/AddToCart', fetchUser, async (req, res) => {
   let userData = await Users.findOne({ _id: req.user.id });
   userData.cartData[req.body.itemId] += 1;
   await Users.findOneAndUpdate({ _id: req.user.id }, { cartData: userData.cartData });
   res.send("Added");
 });
 
-app.post('/RemoveCart', fetchuser, async (req, res) => {
+app.post('/RemoveCart', fetchUser, async (req, res) => {
   try {
     let userData = await Users.findOne({ _id: req.user.id });
     if (userData.cartData[req.body.itemId] > 0) {
@@ -236,12 +224,12 @@ app.post('/RemoveCart', fetchuser, async (req, res) => {
   }
 });
 
-app.post('/getcart', fetchuser, async (req, res) => {
+app.post('/getcart', fetchUser, async (req, res) => {
   let userData = await Users.findOne({ _id: req.user.id });
   res.json(userData.cartData);
 });
 
-app.post('/AddToFavourite', fetchuser, async (req, res) => {
+app.post('/AddToFavourite', fetchUser, async (req, res) => {
   try {
     let userData = await Users.findOne({ _id: req.user.id });
     userData.favoriteData[req.body.itemId] += 1;
@@ -252,7 +240,7 @@ app.post('/AddToFavourite', fetchuser, async (req, res) => {
   }
 });
 
-app.post('/RemoveFavourite', fetchuser, async (req, res) => {
+app.post('/RemoveFavourite', fetchUser, async (req, res) => {
   try {
     let userData = await Users.findOne({ _id: req.user.id });
     if (userData.favoriteData[req.body.itemId] > 0) {
@@ -267,7 +255,7 @@ app.post('/RemoveFavourite', fetchuser, async (req, res) => {
   }
 });
 
-app.post('/getfavourite', fetchuser, async (req, res) => {
+app.post('/getfavourite', fetchUser, async (req, res) => {
   let userData = await Users.findOne({ _id: req.user.id });
   res.json(userData.favoriteData);
 });
@@ -375,12 +363,12 @@ app.get('/api/payments/:transactionId', async (req, res) => {
   }
 });
 
-app.post('/clearcart', fetchuser, async (req, res) => {
+app.post('/clearcart', fetchUser, async (req, res) => {
   await Users.findOneAndUpdate({ _id: req.user.id }, { cartData: {} });
   res.json({ message: "Cart cleared" });
 });
 
-app.post('/clearfavourite', fetchuser, async (req, res) => {
+app.post('/clearfavourite', fetchUser, async (req, res) => {
   await Users.findOneAndUpdate({ _id: req.user.id }, { favoriteData: {} });
   res.json({ message: "Favourites cleared" });
 });
@@ -435,8 +423,6 @@ app.get('/admin/orders', async (req, res) => {
 app.put('/admin/update-order-status', async (req, res) => {
   try {
     const { orderId, payment, delivery } = req.body;
-
-    // Validate payment and delivery values
     const validPayments = ['pending', 'completed', 'refunded'];
     const validDeliveries = ['pending', 'delivered'];
     if (!validPayments.includes(payment)) {
@@ -499,13 +485,34 @@ app.put('/admin/review/status/:id', async (req, res) => {
   }
 });
 
+// endpoint to fetch reviews approved by admin
 app.get('/product/:productId/reviews', async (req, res) => {
   try {
-    const reviews = await Review.find({ product: req.params.productId, status: 'Approved' })
+    let product;
+    // Try finding by MongoDB _id first
+    if (mongoose.Types.ObjectId.isValid(req.params.productId)) {
+      product = await Product.findById(req.params.productId);
+    }
+    // If not found, try finding by numeric id
+    if (!product) {
+      product = await Product.findOne({ id: Number(req.params.productId) });
+    }
+    
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+
+    const reviews = await Review.find({ 
+      product: product._id, 
+      status: 'Approved' 
+    })
       .populate('user', 'name')
       .sort({ date: -1 });
+    
+    console.log(`Fetched ${reviews.length} approved reviews for product ${product._id}`); // Debug log
     res.json({ success: true, reviews });
   } catch (error) {
+    console.error('Error fetching reviews:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });

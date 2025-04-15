@@ -1,64 +1,181 @@
-.add-product{
-    box-sizing: border-box;
+.add-product {
     width: 100%;
-    max-width: 800px;
-    padding: 30px 50px;
-    margin: 20px 30px;
-    border-radius: 6px;
-    background: white;
-}
-.addproduct-itemfield{
+    max-width: 1400px; /* Increased for more space */
+    padding: 40px 70px; /* More spacious padding */
+    margin: 0px 60px;
+    background: #ffffff;
+  }
+  
+  .addproduct-itemfield {
     width: 100%;
-    color: #7b7b7b;
-    font-size: 16px;
-}
-.addproduct-itemfield input{
-    box-sizing: border-box;
-    width: 100%;
-    height: 50px;
-    border-radius: 4px;
-    padding-left: 15px;
-    border: 1px solid #c3c3c3;
-    outline: none;
-    color: #7b7b7b;
-    font-size: 14px;
-}
-.addproduct-price{
-    display: flex;
-    gap: 40px;
-}
-.add-product-selector{
-    padding: 10px;
-    width: 100px;
-    height: 50px;
-    font-size: 14px;
-    color: #7b7b7b;
-    border: 1px solid #7b7b7b8d;
-    border-radius: 4px;
-}
-.addproduct-thumnail-img{
-    height: 120px;
-    width: 120px;
-    border-radius: 10px;
-    object-fit: contain;
-    margin: 10px 0px;
-}
-.addproduct-btn{
-    margin-top: 20px;
-    width: 200px;
-    height: 50px;
-    border-radius: 6px;
-    background-color: #6079ff;
-    border: none;
-    cursor: pointer;
-    color: white;
+    margin-bottom: 24px;
+    color: #495057;
     font-size: 16px;
     font-weight: 500;
-}
-@media(max-width:800px){
-    .add-product{
-        width: auto;
-        padding: 30px;
-        margin: 20px;
+  }
+  
+  .addproduct-itemfield p {
+    margin: 0 0 10px;
+  }
+  
+  .addproduct-itemfield input,
+  .addproduct-itemfield textarea,
+  .addproduct-itemfield select {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 16px;
+    border-radius: 4px;
+    border: 1px solid #ced4da;
+    outline: none;
+    color: #495057;
+    font-size: 15px;
+    background: #f8f9fa;
+  }
+  
+  .addproduct-itemfield textarea {
+    resize: vertical;
+    min-height: 120px;
+  }
+  
+  .addproduct-price {
+    display: flex;
+    gap: 48px; /* Wider spacing between fields */
+    flex-wrap: wrap; /* Wrap if needed */
+  }
+  
+  .add-product-selector {
+    height: 52px;
+    font-size: 15px;
+    color: #495057;
+  }
+  
+  .addproduct-thumbnail-img {
+    height: 160px;
+    width: 160px;
+    border-radius: 8px;
+    object-fit: contain;
+    margin: 16px 0;
+    border: 1px solid #e0e0e0;
+  }
+  
+  .addproduct-btn {
+    margin-top: 24px;
+    width: 240px; /* Bigger button */
+    height: 52px;
+    border-radius: 4px;
+    background-color: #007bff;
+    border: none;
+    color: #ffffff;
+    font-size: 17px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  
+  .addproduct-btn:hover {
+    background-color: #0056b3;
+  }
+  
+  .size-quantity-row {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    margin-bottom: 20px;
+    flex-wrap: wrap; /* Responsive handling */
+  }
+  
+  .size-input,
+  .quantity-input {
+    flex: 1;
+    min-width: 300px;
+    max-width: 400px; /* Utilize wider layout */
+  }
+  
+  .remove-size-btn,
+  .add-size-btn {
+    padding: 12px 24px;
+    border-radius: 4px;
+    border: none;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  
+  .add-size-btn {
+    background-color: #28a745;
+    color: #ffffff;
+  }
+  
+  .add-size-btn:hover {
+    background-color: #218838;
+  }
+  
+  .remove-size-btn {
+    background-color: #dc3545;
+    color: #ffffff;
+  }
+  
+  .remove-size-btn:hover {
+    background-color: #c82333;
+  }
+  
+  .error-message {
+    color: #dc3545;
+    font-size: 15px;
+    margin-bottom: 20px;
+    padding: 12px;
+    background: #f8d7da;
+    border-radius: 4px;
+    text-align: center;
+    width: 100%;
+  }
+  
+  @media (max-width: 1400px) {
+    .add-product {
+      max-width: 95%;
+      padding: 32px 40px;
+      margin: 16px auto;
     }
-}
+  
+    .size-quantity-row {
+      gap: 24px;
+    }
+  }
+  
+  @media (max-width: 900px) {
+    .add-product {
+      padding: 24px;
+      margin: 16px 8px;
+    }
+  
+    .addproduct-itemfield {
+      margin-bottom: 20px;
+    }
+  
+    .addproduct-price {
+      flex-direction: column;
+      gap: 20px;
+    }
+  
+    .size-quantity-row {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 16px;
+    }
+  
+    .remove-size-btn,
+    .add-size-btn {
+      width: 100%;
+      padding: 14px;
+    }
+  
+    .addproduct-btn {
+      width: 100%;
+    }
+  
+    .addproduct-thumbnail-img {
+      height: 130px;
+      width: 130px;
+    }
+  }
+  

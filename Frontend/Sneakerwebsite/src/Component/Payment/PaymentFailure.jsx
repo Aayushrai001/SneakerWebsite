@@ -36,7 +36,7 @@ const PaymentFailure = () => {
       <p>We’re sorry, but your payment could not be processed.</p>
       <p><strong>Reason:</strong> {getReasonMessage(reason)}</p>
       <div className="payment-failure-actions">
-        <a href="/cart" className="retry-btn">Retry Payment</a>
+        <a href="/" className="retry-btn">Retry Payment</a>
         <a href="/" className="home-btn">Return to Home</a>
       </div>
     </div>

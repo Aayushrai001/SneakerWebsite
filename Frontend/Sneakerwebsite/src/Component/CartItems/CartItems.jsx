@@ -4,22 +4,34 @@ import { ShopContext } from '../../Context/ShopContext';
 import remove_icon from '../assets/cart_cross_icon.png';
 import axios from 'axios';
 import khalti from '../assets/khalti.png';
+import { Link } from 'react-router-dom'; // Assuming you're using react-router for navigation
 
 const CartItems = () => {
     const { getTotalCartAmount, all_product, cartItems, removefromCart, addtoCart, decreaseCartItem } = useContext(ShopContext);
     const [showCheckout, setShowCheckout] = useState(false);
     const [sizes, setSizes] = useState({}); // Store selected sizes per product
 
+    // Check if user is logged in
+    const token = localStorage.getItem('auth-token');
+    if (!token) {
+        return (
+            <div className="cartitems">
+                <h2>Please log in first</h2>
+                <p>You need to be logged in to view your cart.</p>
+                <Link to="/login">Go to Login</Link>
+            </div>
+        );
+    }
+
     const handleSizeChange = (productId, size) => {
         setSizes(prev => ({ ...prev, [productId]: size }));
     };
 
     const increaseCartItem = (itemId) => {
-        addtoCart(itemId); // Correctly uses addtoCart from context
+        addtoCart(itemId);
     };
 
     const handleKhaltiPayment = async () => {
-        const token = localStorage.getItem('auth-token');
         if (!token) {
             alert('Please log in to proceed with payment');
             return;

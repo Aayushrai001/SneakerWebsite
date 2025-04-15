@@ -4,22 +4,34 @@ import { ShopContext } from '../../Context/ShopContext';
 import remove_icon from '../assets/cart_cross_icon.png';
 import axios from 'axios';
 import khalti from '../assets/khalti.png';
+import { Link } from 'react-router-dom'; // Assuming you're using react-router for navigation
 
 const FavouriteItems = () => {
     const { getTotalFavouriteAmount, all_product, favouriteItems, removefromFavourite, addtoFavourite } = useContext(ShopContext);
     const [showCheckout, setShowCheckout] = useState(false);
     const [sizes, setSizes] = useState({}); // Store selected sizes per product
 
+    // Check if user is logged in
+    const token = localStorage.getItem('auth-token');
+    if (!token) {
+        return (
+            <div className="cartitems">
+                <h2>Please log in first</h2>
+                <p>You need to be logged in to view your favourites.</p>
+                <Link to="/login">Go to Login</Link>
+            </div>
+        );
+    }
+
     const handleSizeChange = (productId, size) => {
         setSizes(prev => ({ ...prev, [productId]: size }));
     };
 
     const increaseFavouriteItem = (itemId) => {
-        addtoFavourite(itemId); // Uses addtoFavourite from context
+        addtoFavourite(itemId);
     };
 
     const handleKhaltiPayment = async () => {
-        const token = localStorage.getItem("auth-token");
         if (!token) {
             alert("Please log in to proceed with payment");
             return;
@@ -56,7 +68,6 @@ const FavouriteItems = () => {
     
             if (response.data.success) {
                 window.location.href = response.data.payment.payment_url;
-                clearFavourite(); // Clear favourites after successful payment
             } else {
                 alert("Failed to initialize payment: " + (response.data.message || "Unknown error"));
             }

@@ -7,23 +7,32 @@ import { ShopContext } from '../../Context/ShopContext';
 import axios from 'axios';
 
 const ProductDisplay = ({ product }) => {
-  const { addtoCart, addtoFavourite } = useContext(ShopContext);
+  const { addtoCart, addtoFavourite, cartItems, favouriteItems, fetchAllProducts } = useContext(ShopContext);
   const [showCheckout, setShowCheckout] = useState(false);
   const [selectedSize, setSelectedSize] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [reviews, setReviews] = useState([]);
   const [visibleReviews, setVisibleReviews] = useState(3);
   const [showMore, setShowMore] = useState(true);
+  const [availableSizes, setAvailableSizes] = useState([]); // State to store available sizes
+
+  const isLoggedIn = !!localStorage.getItem('auth-token');
 
   useEffect(() => {
     if (product) {
+      console.log('Product data in ProductDisplay:', product);
+      console.log('Product image URL:', product.image);
+      // Filter sizes with quantity > 0
+      const sizesWithStock = product.sizes.filter(size => size.quantity > 0);
+      setAvailableSizes(sizesWithStock);
       fetchReviews();
     }
   }, [product]);
 
   const fetchReviews = async () => {
     try {
-      const productId = product._id || product.id;
+      const productId = product?._id || product?.id;
+      if (!productId) return; // Skip if productId is not available
       const response = await fetch(`http://localhost:5000/product/${productId}/reviews`);
       if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
       const data = await response.json();
@@ -40,21 +49,46 @@ const ProductDisplay = ({ product }) => {
     }
   };
 
-  const handleSizeChange = (event) => setSelectedSize(event.target.value);
-  const handleQuantityChange = (event) => setQuantity(Math.max(1, parseInt(event.target.value) || 1));
-  const increaseQuantity = () => setQuantity((prev) => prev + 1);
-  const decreaseQuantity = () => setQuantity((prev) => Math.max(1, prev - 1));
+  const handleSizeChange = (event) => {
+    const selected = event.target.value;
+    const sizeData = product?.sizes.find(s => s.size === selected);
+    if (sizeData && sizeData.quantity > 0) {
+      setSelectedSize(selected);
+    }
+  };
+
+  const handleQuantityChange = (event) => {
+    const newQuantity = Math.max(1, parseInt(event.target.value) || 1);
+    setQuantity(newQuantity);
+  };
+
+  const increaseQuantity = () => {
+    setQuantity((prev) => {
+      const sizeData = product?.sizes.find(s => s.size === selectedSize);
+      if (sizeData && prev + 1 <= sizeData.quantity) {
+        return prev + 1;
+      }
+      return prev;
+    });
+  };
+
+  const decreaseQuantity = () => {
+    setQuantity((prev) => Math.max(1, prev - 1));
+  };
 
   const handleKhaltiPayment = async () => {
     if (!selectedSize) return alert('Please select a size');
     if (quantity < 1) return alert('Quantity must be at least 1');
     const token = localStorage.getItem('auth-token');
     if (!token) return alert('Please log in to proceed with payment');
+    const productId = product?._id || product?.id;
+    if (!productId) return alert('Invalid product ID');
 
     try {
-      const cartItems = [{ productId: product._id || product.id, quantity, totalPrice: product.new_price * quantity, size: selectedSize }];
+      const cartItems = [{ productId, quantity, totalPrice: product.new_price * quantity, size: selectedSize }];
       const totalPrice = product.new_price * quantity;
-      const orderDetails = { productId: product._id || product.id, productName: product.name, quantity, size: selectedSize, totalPrice, productImage: product.image };
+      console.log('Khalti Payload:', { cartItems, totalPrice });
+      const orderDetails = { productId, productName: product.name, quantity, size: selectedSize, totalPrice, productImage: product.image };
       localStorage.setItem('lastOrder', JSON.stringify(orderDetails));
 
       const response = await axios.post(
@@ -74,6 +108,31 @@ const ProductDisplay = ({ product }) => {
     }
   };
 
+  const handleAddToCart = () => {
+    if (!isLoggedIn) {
+      alert('Please log in to add items to your cart');
+      return;
+    }
+    if (!selectedSize) {
+      alert('Please select a size');
+      return;
+    }
+    const sizeData = product?.sizes.find(s => s.size === selectedSize);
+    if (sizeData.quantity < quantity) {
+      alert(`Only ${sizeData.quantity} items available for size ${selectedSize}`);
+      return;
+    }
+    addtoCart(product.id, quantity);
+  };
+
+  const handleAddToFavourite = () => {
+    if (!isLoggedIn) {
+      alert('Please log in to add items to your favorites');
+      return;
+    }
+    addtoFavourite(product.id);
+  };
+
   const toggleReviews = () => {
     setShowMore(!showMore);
     setVisibleReviews(showMore ? reviews.length : 3);
@@ -81,24 +140,31 @@ const ProductDisplay = ({ product }) => {
 
   const averageRating = reviews.length > 0 ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) : 0;
 
+  // Get the number of items in cart and favorites for this product
+  const cartQuantity = product ? (cartItems[product.id] || 0) : 0;
+  const favouriteQuantity = product ? (favouriteItems[product.id] || 0) : 0;
+
+  if (!product) {
+    return <div>Loading product...</div>;
+  }
+
   return (
     <div className="productdisplay">
-      {/* Product Display Container */}
       <div className="productdisplay-container">
-        {/* Left Section: Product Images */}
         <div className="productdisplay-left">
-          <div className="productdisplay-img-list">
-            <img src={product.image} alt="Product" />
-            <img src={product.image} alt="Product" />
-            <img src={product.image} alt="Product" />
-            <img src={product.image} alt="Product" />
-          </div>
           <div className="productdisplay-img">
-            <img src={product.image} alt="Product" className="productdisplay-main-img" />
+            <img
+              src={product.image}
+              alt={product.name || 'Product'}
+              className="productdisplay-main-img"
+              onError={(e) => {
+                console.error(`Failed to load image: ${product.image}`);
+                e.target.src = 'http://localhost:5000/images/placeholder.jpg';
+              }}
+            />
           </div>
         </div>
 
-        {/* Right Section: Product Details */}
         <div className="productdisplay-right">
           <h1>{product.name}</h1>
           <div className="overall-rating">
@@ -119,10 +185,20 @@ const ProductDisplay = ({ product }) => {
           </div>
           <div className="productdisplay-right-size">
             <h1>Select Size</h1>
-            <select value={selectedSize} onChange={handleSizeChange} className="productdisplay-right-size-select">
+            <select
+              value={selectedSize}
+              onChange={handleSizeChange}
+              className="productdisplay-right-size-select"
+            >
               <option value="">Select a size</option>
-              {[...Array(41)].map((_, i) => (
-                <option key={i} value={i + 4}>{i + 4}</option>
+              {product.sizes.map((size) => (
+                <option
+                  key={size.size}
+                  value={size.size}
+                  disabled={size.quantity === 0}
+                >
+                  {size.size}
+                </option>
               ))}
             </select>
           </div>
@@ -141,11 +217,11 @@ const ProductDisplay = ({ product }) => {
             </div>
           </div>
           <div className="productdisplay-right-buttons">
-            <button className="productdisplay-right-cart" onClick={() => addtoCart(product.id, quantity)}>
-              ADD TO CART
+            <button className="productdisplay-right-cart" onClick={handleAddToCart}>
+              ADD TO CART {cartQuantity > 0 && `(${cartQuantity})`}
             </button>
-            <button className="productdisplay-right-favorite" onClick={() => addtoFavourite(product.id)}>
-              ADD TO FAVORITE
+            <button className="productdisplay-right-favorite" onClick={handleAddToFavourite}>
+              ADD TO FAVORITE {favouriteQuantity > 0 && `(${favouriteQuantity})`}
             </button>
           </div>
           <button className="checkout" onClick={() => setShowCheckout(true)}>CHECKOUT</button>
@@ -168,7 +244,6 @@ const ProductDisplay = ({ product }) => {
         </div>
       </div>
 
-      {/* Reviews Section - Already at the bottom */}
       <div className="reviews-section">
         <h2>Customer Reviews ({reviews.length})</h2>
         {reviews.length === 0 ? (

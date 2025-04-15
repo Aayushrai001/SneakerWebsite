@@ -3,6 +3,7 @@ import './Orders.css';
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -34,15 +35,23 @@ const Orders = () => {
         setOrders(orders.map(order =>
           order._id === id ? { ...order, payment: newPayment, delivery: newDelivery } : order
         ));
+        setMessage('Order status updated successfully!');
+        setTimeout(() => setMessage(''), 3000);
+      } else {
+        setMessage('Failed to update order status');
+        setTimeout(() => setMessage(''), 3000);
       }
     } catch (error) {
       console.error('Error updating status:', error);
+      setMessage('Error updating order status');
+      setTimeout(() => setMessage(''), 3000);
     }
   };
 
   return (
     <div className="orders-container">
       <h2>Admin Order Management</h2>
+      {message && <div className="update-message">{message}</div>}
       <table>
         <thead>
           <tr>
@@ -55,7 +64,6 @@ const Orders = () => {
             <th>Payment Method</th>
             <th>Payment</th>
             <th>Delivery</th>
-            <th>Action</th>
           </tr>
         </thead>
         <tbody>
@@ -92,11 +100,6 @@ const Orders = () => {
                   <option value="pending">Pending</option>
                   <option value="delivered">Delivered</option>
                 </select>
-              </td>
-              <td>
-                <button onClick={() => handleStatusChange(order._id, order.payment, order.delivery)}>
-                  Update
-                </button>
               </td>
             </tr>
           ))}

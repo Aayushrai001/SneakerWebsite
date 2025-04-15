@@ -2,20 +2,20 @@
 
 .orders-container {
   width: 100%;
-  max-width: 1200px; /* Limits the width for better readability on large screens */
-  margin: 0 auto; /* Centers the container */
+  max-width: 1200px;
+  margin: 0 auto;
   padding: 20px;
-  background-color: #fff; /* White background for a clean look */
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
-  border-radius: 8px; /* Slightly rounded corners */
+  background-color: #fff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
 }
 
 .orders-container h2 {
   margin-bottom: 20px;
-  color: #2c3e50; /* Darker blue-gray for a professional tone */
+  color: #2c3e50;
   font-size: 24px;
-  font-weight: 600; /* Slightly bold for emphasis */
-  text-align: center; /* Centered title */
+  font-weight: 600;
+  text-align: center;
 }
 
 table {
@@ -24,67 +24,53 @@ table {
 }
 
 thead {
-  background-color: #ecf0f1; /* Light gray background for header */
-  color: #2c3e50; /* Matching dark blue-gray text */
+  background-color: #ecf0f1;
+  color: #2c3e50;
 }
 
 th, td {
-  padding: 12px 15px; /* Consistent padding for spacing */
+  padding: 12px 15px;
   text-align: left;
-  border-bottom: 1px solid #e0e0e0; /* Light gray border for separation */
-  font-size: 14px; /* Readable font size */
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 14px;
 }
 
 th {
-  font-weight: 600; /* Bold headers */
-  text-transform: uppercase; /* Uppercase for a clean, structured look */
-  letter-spacing: 0.5px; /* Slight spacing for readability */
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 td img {
-  width: 40px; /* Smaller image size for cleaner layout */
+  width: 40px;
   height: 40px;
-  object-fit: cover; /* Ensures images scale nicely */
-  border-radius: 4px; /* Rounded corners for images */
+  object-fit: cover;
+  border-radius: 4px;
 }
 
 select {
   padding: 6px 10px;
-  border: 1px solid #bdc3c7; /* Light gray border */
+  border: 1px solid #bdc3c7;
   border-radius: 4px;
   background-color: #fff;
   font-size: 14px;
-  color: #34495e; /* Darker text color */
+  color: #34495e;
   cursor: pointer;
-  transition: border-color 0.3s ease; /* Smooth transition for hover */
+  transition: border-color 0.3s ease;
 }
 
 select:hover, select:focus {
-  border-color: #3498db; /* Blue border on hover/focus */
+  border-color: #3498db;
   outline: none;
 }
 
-button {
-  padding: 6px 12px;
-  border: 1px solid #3498db; /* Blue border */
+.update-message {
+  padding: 10px;
+  margin: 10px 0;
   border-radius: 4px;
-  background-color: #3498db; /* Blue background */
-  color: #fff; /* White text */
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.3s ease, border-color 0.3s ease; /* Smooth transition */
-}
-
-button:hover {
-  background-color: #2980b9; /* Darker blue on hover */
-  border-color: #2980b9;
-}
-
-button:disabled {
-  background-color: #bdc3c7; /* Grayed out when disabled */
-  border-color: #bdc3c7;
-  color: #7f8c8d; /* Lighter text */
-  cursor: not-allowed;
+  background-color: #dff0d8;
+  color: #3c763d;
+  text-align: center;
 }
 
 /* Responsive adjustments */
@@ -94,17 +80,17 @@ button:disabled {
   }
 
   th, td {
-    padding: 8px 10px; /* Reduced padding on smaller screens */
-    font-size: 12px; /* Smaller text */
+    padding: 8px 10px;
+    font-size: 12px;
   }
 
   td img {
-    width: 30px; /* Smaller images */
+    width: 30px;
     height: 30px;
   }
 
-  select, button {
-    padding: 5px 8px; /* Smaller buttons and selects */
+  select {
+    padding: 5px 8px;
     font-size: 12px;
   }
 }

@@ -253,6 +253,25 @@
     vertical-align: middle;
 }
 
+.cartitems h2 {
+    text-align: center;
+    margin-top: 20px;
+}
+.cartitems p {
+    text-align: center;
+    margin: 10px 0;
+}
+.cartitems a {
+    display: block;
+    text-align: center;
+    color: #007bff;
+    text-decoration: none;
+    font-weight: bold;
+}
+.cartitems a:hover {
+    text-decoration: underline;
+}
+
 @media (max-width: 768px) {
     .cartitems-down {
         flex-direction: column;

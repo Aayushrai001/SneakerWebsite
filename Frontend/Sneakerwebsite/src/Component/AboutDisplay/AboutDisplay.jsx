@@ -2,8 +2,6 @@ import React from 'react';
 import './AboutDisplay.css';
 import sneakerimg from '../assets/about.png';
 import authorimg from '../assets/profile.jpg';
-// import authorimg2 from '../assets/profile.jpg';
-// import authorimg3 from '../assets/profile.jpg';
 import product1 from '../assets/Air Jordan1 High OG Taxi.png';
 import product2 from '../assets/Jordan4 Retro Infrared.jpg';
 import product3 from '../assets/Nike SB Dunk Low Pro White Gum.jpg';

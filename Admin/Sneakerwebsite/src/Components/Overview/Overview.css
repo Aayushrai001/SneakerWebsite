@@ -1,0 +1,73 @@
+.overview-container {
+    margin-top: 30px;
+    padding: 2rem;
+    background-color: white;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  
+  .overview-title {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    color: #333;
+  }
+  
+  .overview-cards {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  
+  .card {
+    flex: 1 1 22%;
+    background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 20px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    transition: transform 0.3s ease;
+  }
+  
+  .card:nth-child(2) {
+    background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
+  }
+  .card:nth-child(3) {
+    background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+  }
+  .card:nth-child(4) {
+    background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+  }
+  
+  .card:hover {
+    transform: translateY(-5px);
+  }
+  
+  .card h3 {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .card p {
+    font-size: 1.8rem;
+    font-weight: bold;
+  }
+  
+  .chart-section {
+    margin-top: 2rem;
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: 20px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+  }
+  
+  .chart-title {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: #333;
+    font-weight: 600;
+  }
+  

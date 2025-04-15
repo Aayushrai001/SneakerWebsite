@@ -34,7 +34,7 @@ const Login = () => {
       if (data.success && data.token) {
         localStorage.setItem('auth-token', data.token);
         setError('');
-        navigate('/admin', { replace: true }); // Redirect to admin panel, replace history
+        navigate('/admin/overview', { replace: true }); // Redirect to /admin/overview
       } else {
         setError(data.message || 'Invalid email or password');
       }

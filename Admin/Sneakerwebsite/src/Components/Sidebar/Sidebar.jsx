@@ -1,14 +1,25 @@
 import React from 'react';
 import './Sidebar.css';
 import { Link } from 'react-router-dom';
+import overview_icon from '../../assets/overview.png';
 import add_product_icon from '../../assets/Product_Cart.svg';
 import list_product_icon from '../../assets/Product_list_icon.svg';
+import ratingfeedback_icon from '../../assets/feedback.png';
+import orders_icon from '../../assets/orders.png';
+import Transaction_icon from '../../assets/transaction.png';
+import custom_icon from '../../assets/custom.png';
+import dashboard_icon from '../../assets/dashboard.png';
 
 const Sidebar = ({ onLogout }) => {
   return (
     <div className="sidebar">
+      <div className="Dashboard"> {/* Fixed typo */}
+        <h1>Dashboard</h1> {/* Fixed typo in text */}
+        <img src={dashboard_icon} alt="Dashboard" />
+      </div>
       <Link to="/admin/overview" style={{ textDecoration: 'none' }}>
         <div className="sidebar-item">
+          <img src={overview_icon} alt="Product List" />
           <p>Overview</p>
         </div>
       </Link>
@@ -17,7 +28,7 @@ const Sidebar = ({ onLogout }) => {
           <img 
             src={add_product_icon} 
             alt="Add Product" 
-            onError={(e) => (e.target.style.display = 'none')} // Hide image if it fails to load
+            onError={(e) => (e.target.style.display = 'none')} 
           />
           <p>Add Product</p>
         </div>
@@ -30,17 +41,26 @@ const Sidebar = ({ onLogout }) => {
       </Link>
       <Link to="/admin/reviewsfeedback" style={{ textDecoration: 'none' }}>
         <div className="sidebar-item">
+          <img src={ratingfeedback_icon} alt="Rating Feedback" />
           <p>Reviews and Feedback</p>
         </div>
       </Link>
       <Link to="/admin/orders" style={{ textDecoration: 'none' }}>
         <div className="sidebar-item">
+          <img src={orders_icon} alt="Orders" />
           <p>Orders</p>
         </div>
       </Link>
       <Link to="/admin/transaction" style={{ textDecoration: 'none' }}>
         <div className="sidebar-item">
+          <img src={Transaction_icon} alt="Transaction" />
           <p>Transaction</p>
+        </div>
+      </Link>
+      <Link to="/admin/custom" style={{ textDecoration: 'none' }}>
+        <div className="sidebar-item">
+          <img src={custom_icon} alt="Custom" />
+          <p>Custom</p> 
         </div>
       </Link>
       <div className="sidebar-item logout">

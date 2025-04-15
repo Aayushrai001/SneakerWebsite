@@ -1,132 +1,358 @@
-/* Container for the entire about page */
+/* General Container */
 .about-container {
-  font-family: Arial, sans-serif;
-  padding: 20px;
-  max-width: 100%;
-  position: relative;
+  max-width: 1300px;
+  margin: 10px auto;
+  padding: 20px 20px;
+  font-family: 'Roboto', sans-serif; /* Changed to a more mature font */
+  color: #333;
+  background-color: #fff; /* Neutral white background */
   overflow: hidden;
-  color: white;
 }
 
-/* Background Styles */
-.about-container::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: gray;
-  clip-path: polygon(0 0, 100% 0, 0 100%);
-  z-index: -1;
-}
-
-.about-container::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: black;
-  clip-path: polygon(100% 0, 100% 100%, 0 100%);
-  z-index: -1;
-}
-
+/* About Section */
 .about-image {
+  position: relative;
+  padding: 60px 20px;
+  background: linear-gradient(135deg, #2c3e50 0%, #c0392b 100%); /* Deep navy to muted red gradient for a mature look */
+  color: #fff;
+  border-radius: 16px;
+  margin-bottom: 40px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15); /* Subtle shadow for depth */
+  opacity: 0;
+  transform: translateY(30px);
+  animation: fadeInUp 1s ease forwards;
+}
+
+.about-content {
+  max-width: 1100px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 40px;
-  position: relative;
-  z-index: 1;
-}
-
-.sneaker-img {
-  width: 80%;
-  height: 550px;
-  margin: 10px;
-  margin-bottom: 10px;
-}
-.about-content {
   text-align: center;
 }
 
 .about-content h1 {
-  font-size: 2.5em;
-  margin-bottom: 10px;
+  font-size: 3rem; /* Slightly larger for impact */
+  font-weight: 700;
+  margin-bottom: 25px;
+  letter-spacing: 2px;
+  text-transform: uppercase; /* Uppercase for a premium feel */
+  color: #fff;
+  position: relative;
+  opacity: 0;
+  animation: fadeIn 1s ease forwards;
+  animation-delay: 0.2s;
+}
+
+.about-content h1::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 3px;
+  background-color: #fff; /* White underline for elegance */
+  border-radius: 2px;
 }
 
 .about-content p {
-  font-size: 1.2em;
-  line-height: 1.6;
+  font-size: 1.2rem; /* Slightly larger for readability */
+  line-height: 1.8;
   margin-bottom: 20px;
+  max-width: 700px;
+  color: #f5f5f5; /* Softer white for text */
+  opacity: 0;
+  animation: fadeIn 1.5s ease forwards;
+  animation-delay: 0.4s;
 }
 
-/* Author Section Styles */
+.about-content p strong {
+  font-weight: 600;
+  color: #e74c3c; /* Accent color for emphasis */
+}
+
+.sneaker-img {
+  width: 100%;
+  max-width: 450px; /* Slightly smaller for balance */
+  height: auto;
+  margin-top: 30px;
+  border-radius: 12px;
+  border: 4px solid #fff; /* White border for a clean frame */
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); /* Deeper shadow for depth */
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+  opacity: 0;
+  animation: fadeIn 1.8s ease forwards;
+  animation-delay: 0.6s;
+}
+
+.sneaker-img:hover {
+  transform: translateY(-8px); /* Subtle lift on hover */
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Author Section (Unchanged) */
 .author-section {
   display: flex;
   align-items: center;
+  gap: 40px;
+  padding: 40px 0;
   margin-bottom: 40px;
-  position: relative;
-  z-index: 1;
+  opacity: 0;
+  transform: translateX(-50px);
+  animation: slideIn 1s ease forwards;
 }
 
 .author-section.left-align {
-  flex-direction: row;
+  animation-delay: 0.2s;
 }
 
-/* .author-section.right-align {
+.author-section.right-align {
   flex-direction: row-reverse;
-} */
+  transform: translateX(50px);
+  animation-delay: 0.4s;
+}
 
 .author-img {
+  width: 200px;
+  height: 200px;
   border-radius: 50%;
-  width: 150px;
-  height: 150px;
   object-fit: cover;
-  margin: 0 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.author-img:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.author-content {
+  flex: 1;
 }
 
 .author-content h2 {
-  font-size: 2em;
-  margin-bottom: 10px;
+  font-size: 2rem;
+  font-weight: 600;
+  color: #c0392b; /* Matching accent color */
+  margin-bottom: 15px;
 }
 
 .author-content p {
-  font-size: 1.2em;
+  font-size: 1rem;
   line-height: 1.6;
+  color: #555;
 }
 
-/* Product Section Styles */
-.product-section h2 {
-  font-size: 2em;
-  margin-bottom: 20px;
+/* Product Section (Unchanged) */
+.product-section {
   text-align: center;
-  position: relative;
-  z-index: 1;
+  padding: 40px 0;
+  opacity: 0;
+  transform: translateY(50px);
+  animation: fadeInUp 1s ease forwards;
+  animation-delay: 0.8s;
+}
+
+.product-section h2 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 30px;
 }
 
 .product-grid {
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
-  position: relative;
-  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 30px;
 }
 
 .product-card {
-  flex: 1;
-  text-align: center;
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  opacity: 0;
+  animation: fadeIn 1.2s ease forwards;
+}
+
+.product-card:nth-child(1) { animation-delay: 1s; }
+.product-card:nth-child(2) { animation-delay: 1.2s; }
+.product-card:nth-child(3) { animation-delay: 1.4s; }
+
+.product-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
 }
 
 .product-card img {
-  max-width: 80%;
-  border-radius: 10px;
-  margin-bottom: 10px;
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  transition: transform 0.3s ease;
+}
+
+.product-card:hover img {
+  transform: scale(1.05);
 }
 
 .product-card p {
-  font-size: 1.2em;
-  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Animations (SlideIn for Author Section) */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .about-content h1 {
+    font-size: 2.5rem;
+  }
+
+  .about-content p {
+    font-size: 1.1rem;
+    max-width: 600px;
+  }
+
+  .sneaker-img {
+    max-width: 400px;
+  }
+
+  .author-section {
+    flex-direction: column;
+    text-align: center;
+    gap: 20px;
+  }
+
+  .author-section.right-align {
+    flex-direction: column;
+  }
+
+  .author-img {
+    width: 150px;
+    height: 150px;
+  }
+
+  .author-content h2 {
+    font-size: 1.8rem;
+  }
+
+  .product-section h2 {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .about-image {
+    padding: 40px 15px;
+  }
+
+  .about-content h1 {
+    font-size: 2rem;
+  }
+
+  .about-content p {
+    font-size: 1rem;
+    max-width: 500px;
+  }
+
+  .sneaker-img {
+    max-width: 300px;
+  }
+
+  .author-content h2 {
+    font-size: 1.5rem;
+  }
+
+  .author-content p {
+    font-size: 0.9rem;
+  }
+
+  .product-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .product-card img {
+    height: 180px;
+  }
+}
+
+@media (max-width: 500px) {
+  .about-container {
+    padding: 20px 10px;
+  }
+
+  .about-image {
+    padding: 30px 10px;
+  }
+
+  .about-content h1 {
+    font-size: 1.6rem;
+  }
+
+  .about-content p {
+    font-size: 0.9rem;
+    max-width: 100%;
+  }
+
+  .sneaker-img {
+    max-width: 250px;
+  }
+
+  .author-img {
+    width: 120px;
+    height: 120px;
+  }
+
+  .author-content h2 {
+    font-size: 1.3rem;
+  }
+
+  .product-section h2 {
+    font-size: 1.8rem;
+  }
+
+  .product-card img {
+    height: 150px;
+  }
+
+  .product-card p {
+    font-size: 1rem;
+  }
 }

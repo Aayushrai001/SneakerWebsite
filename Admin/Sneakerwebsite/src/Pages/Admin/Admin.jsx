@@ -1,6 +1,7 @@
 import React from 'react';
 import './Admin.css';
 import Sidebar from '../../Components/Sidebar/Sidebar';
+import Navabr from '../../Components/Navbar/Navabr';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import AddProduct from '../../Components/AddProduct/AddProduct';
 import ListProduct from '../../Components/ListProduct/ListProduct';
@@ -18,6 +19,7 @@ const Admin = () => {
 
   return (
     <div className="admin">
+      <Navabr /> {/* Add the Navbar here */}
       <Sidebar onLogout={handleLogout} />
       <div className="admin-content">
         <Routes>

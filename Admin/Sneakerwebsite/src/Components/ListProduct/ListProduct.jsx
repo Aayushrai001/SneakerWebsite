@@ -1,24 +1,39 @@
 import React, { useEffect, useState } from 'react';
 import './ListProduct.css';
 import cross_icon from '../../assets/cross_icon.png';
+import filter_icon from '../../assets/filter.png';
 
 const ListProduct = () => {
   const [allProducts, setAllProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterCategory, setFilterCategory] = useState(""); // State for filtering by category
-  const [visibleProductsCount, setVisibleProductsCount] = useState(3);
+  const [filterCategory, setFilterCategory] = useState("");
+  const [visibleProductsCount, setVisibleProductsCount] = useState(12);
   const [error, setError] = useState(null);
-  const [expandedProductId, setExpandedProductId] = useState(null); // Track expanded product
-  const [restockData, setRestockData] = useState({}); // Track restock inputs
+  const [expandedProductId, setExpandedProductId] = useState(null);
+  const [restockData, setRestockData] = useState({});
 
-  const fetchInfo = async () => {
+  // Fisher-Yates shuffle to randomize array
+  const shuffleArray = (array) => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  const fetchInfo = async (category = "") => {
     try {
-      const res = await fetch('http://localhost:5000/allproducts');
+      const url = category
+        ? `http://localhost:5000/allproducts?category=${category}`
+        : 'http://localhost:5000/allproducts';
+      const res = await fetch(url);
       if (!res.ok) {
         throw new Error(`HTTP error! Status: ${res.status}`);
       }
       const data = await res.json();
-      setAllProducts(data);
+      // Shuffle products before setting state
+      setAllProducts(shuffleArray(data));
       setError(null);
     } catch (error) {
       console.error("Error fetching products:", error);
@@ -27,8 +42,8 @@ const ListProduct = () => {
   };
 
   useEffect(() => {
-    fetchInfo();
-  }, []);
+    fetchInfo(filterCategory);
+  }, [filterCategory]);
 
   const removeProduct = async (id) => {
     try {
@@ -44,6 +59,7 @@ const ListProduct = () => {
       const data = await response.json();
       if (data.success) {
         setAllProducts(prevProducts => prevProducts.filter(product => product.id !== id));
+        setExpandedProductId(null);
         alert("Product removed successfully");
       } else {
         alert("Failed to remove product: " + data.message);
@@ -51,6 +67,31 @@ const ListProduct = () => {
     } catch (error) {
       console.error("Error removing product:", error);
       alert("Error removing product");
+    }
+  };
+
+  const removeSize = async (productId, sizeToRemove) => {
+    try {
+      const response = await fetch('http://localhost:5000/removesize', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: productId, size: sizeToRemove }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        await fetchInfo(filterCategory);
+        setExpandedProductId(null);
+        alert(`Size ${sizeToRemove} removed successfully`);
+      } else {
+        alert("Failed to remove size: " + data.message);
+      }
+    } catch (error) {
+      console.error("Error removing size:", error);
+      alert("Error removing size");
     }
   };
 
@@ -73,8 +114,9 @@ const ListProduct = () => {
 
       const data = await response.json();
       if (data.success) {
-        await fetchInfo(); // Refresh product list
-        setRestockData(prev => ({ ...prev, [productId]: [] })); // Clear restock inputs
+        await fetchInfo(filterCategory);
+        setRestockData(prev => ({ ...prev, [productId]: [] }));
+        setExpandedProductId(null);
         alert("Product restocked successfully");
       } else {
         alert("Failed to restock product: " + data.message);
@@ -100,6 +142,14 @@ const ListProduct = () => {
     });
   };
 
+  const handleRemoveSizeInput = (productId, index) => {
+    setRestockData(prev => {
+      const updatedSizes = [...(prev[productId] || [])];
+      updatedSizes.splice(index, 1);
+      return { ...prev, [productId]: updatedSizes };
+    });
+  };
+
   const toggleProductDetails = (productId) => {
     setExpandedProductId(prev => (prev === productId ? null : productId));
   };
@@ -107,17 +157,13 @@ const ListProduct = () => {
   const filteredProducts = allProducts
     .filter((product) =>
       product.name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .filter((product) =>
-      filterCategory ? product.category === filterCategory : true
     );
 
   const toggleShowMore = () => {
-    setVisibleProductsCount(prev => prev === 3 ? filteredProducts.length : 3);
+    setVisibleProductsCount(prev => prev === 12 ? prev + 9 : 12);
   };
 
-  // Get unique categories for the filter dropdown
-  const categories = [...new Set(allProducts.map(product => product.category))];
+  const categories = ["men", "women", "kid"];
 
   return (
     <div className='list-product'>
@@ -130,30 +176,36 @@ const ListProduct = () => {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="listproduct-search"
         />
-        <select
-          value={filterCategory}
-          onChange={(e) => setFilterCategory(e.target.value)}
-          className="listproduct-filter"
-        >
-          <option value="">Filter by Category</option>
-          {categories.map((category, index) => (
-            <option key={index} value={category}>
-              {category}
-            </option>
-          ))}
-        </select>
+        <div className="listproduct-filter-wrapper">
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="listproduct-filter"
+          >
+            <option value="">All Categories</option>
+            {categories.map((category, index) => (
+              <option key={index} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+          <img src={filter_icon} alt="Filter" className="listproduct-filter-icon" />
+        </div>
       </div>
       {error && <p className="error-message">{error}</p>}
       <div className="listproduct-allproducts">
         {filteredProducts.length > 0 ? (
           filteredProducts.slice(0, visibleProductsCount).map((product) => (
             <div key={product.id} className="listproduct-item">
-              <div className="listproduct-summary" onClick={() => toggleProductDetails(product.id)}>
-                <img src={product.image} alt={product.name} className='listproduct-product-icon' />
-                <p>{product.name}</p>
+              <div className="listproduct-card" onClick={() => toggleProductDetails(product.id)}>
+                <img src={product.image} alt={product.name} className="listproduct-product-icon" />
+                <p className="listproduct-product-name">{product.name}</p>
               </div>
               {expandedProductId === product.id && (
                 <div className="listproduct-details">
+                  <div className="listproduct-details-cross" onClick={() => toggleProductDetails(product.id)}>
+                    <img src={cross_icon} alt="Close" />
+                  </div>
                   <p><strong>Price:</strong> Rs.{product.new_price}</p>
                   <p><strong>Category:</strong> {product.category}</p>
                   <p><strong>Brand:</strong> {product.brand}</p>
@@ -162,8 +214,14 @@ const ListProduct = () => {
                     <strong>Sizes:</strong>
                     <ul>
                       {product.sizes.map((size, index) => (
-                        <li key={index}>
+                        <li key={index} className="size-item">
                           {size.size}: {size.quantity} available
+                          <button
+                            className="remove-size-btn"
+                            onClick={() => removeSize(product.id, size.size)}
+                          >
+                            Remove
+                          </button>
                         </li>
                       ))}
                     </ul>
@@ -179,7 +237,7 @@ const ListProduct = () => {
                       className="remove-btn"
                       onClick={() => removeProduct(product.id)}
                     >
-                      Remove
+                      Remove Product
                     </button>
                   </div>
                   {restockData[product.id]?.length > 0 && (
@@ -187,23 +245,31 @@ const ListProduct = () => {
                       <h3>Restock Product</h3>
                       {restockData[product.id].map((sizeInput, index) => (
                         <div key={index} className="restock-input">
-                          <input
-                            type="text"
-                            placeholder="Size (e.g., 8)"
-                            value={sizeInput.size}
-                            onChange={(e) =>
-                              handleSizeChange(product.id, index, "size", e.target.value)
-                            }
-                          />
-                          <input
-                            type="number"
-                            placeholder="Quantity"
-                            value={sizeInput.quantity}
-                            onChange={(e) =>
-                              handleSizeChange(product.id, index, "quantity", e.target.value)
-                            }
-                            min="0"
-                          />
+                          <div className="input-group">
+                            <input
+                              type="text"
+                              placeholder="Size (e.g., 8)"
+                              value={sizeInput.size}
+                              onChange={(e) =>
+                                handleSizeChange(product.id, index, "size", e.target.value)
+                              }
+                            />
+                            <input
+                              type="number"
+                              placeholder="Quantity"
+                              value={sizeInput.quantity}
+                              onChange={(e) =>
+                                handleSizeChange(product.id, index, "quantity", e.target.value)
+                              }
+                              min="0"
+                            />
+                          </div>
+                          <button
+                            className="remove-restock-input-btn"
+                            onClick={() => handleRemoveSizeInput(product.id, index)}
+                          >
+                            Remove
+                          </button>
                         </div>
                       ))}
                       <button
@@ -216,16 +282,15 @@ const ListProduct = () => {
                   )}
                 </div>
               )}
-              <hr />
             </div>
           ))
         ) : (
           <p className="no-products-message">No products found</p>
         )}
       </div>
-      {filteredProducts.length > 3 && (
+      {filteredProducts.length > 12 && (
         <button onClick={toggleShowMore} className="see-more-btn">
-          {visibleProductsCount === 3 ? 'See More' : 'Show Less'}
+          {visibleProductsCount === 12 ? 'See More' : 'Show Less'}
         </button>
       )}
     </div>

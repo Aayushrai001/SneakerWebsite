@@ -14,7 +14,7 @@ const ProductDisplay = ({ product }) => {
   const [reviews, setReviews] = useState([]);
   const [visibleReviews, setVisibleReviews] = useState(3);
   const [showMore, setShowMore] = useState(true);
-  const [availableSizes, setAvailableSizes] = useState([]); // State to store available sizes
+  const [availableSizes, setAvailableSizes] = useState([]);
 
   const isLoggedIn = !!localStorage.getItem('auth-token');
 
@@ -22,8 +22,18 @@ const ProductDisplay = ({ product }) => {
     if (product) {
       console.log('Product data in ProductDisplay:', product);
       console.log('Product image URL:', product.image);
-      // Filter sizes with quantity > 0
-      const sizesWithStock = product.sizes.filter(size => size.quantity > 0);
+      // Filter and sort sizes with quantity > 0 in ascending order
+      const sizesWithStock = product.sizes
+        .filter(size => size.quantity > 0)
+        .sort((a, b) => {
+          // Convert sizes to numbers if possible, else compare as strings
+          const sizeA = isNaN(a.size) ? a.size : parseFloat(a.size);
+          const sizeB = isNaN(b.size) ? b.size : parseFloat(b.size);
+          if (typeof sizeA === 'number' && typeof sizeB === 'number') {
+            return sizeA - sizeB;
+          }
+          return sizeA.localeCompare(sizeB);
+        });
       setAvailableSizes(sizesWithStock);
       fetchReviews();
     }
@@ -32,7 +42,7 @@ const ProductDisplay = ({ product }) => {
   const fetchReviews = async () => {
     try {
       const productId = product?._id || product?.id;
-      if (!productId) return; // Skip if productId is not available
+      if (!productId) return;
       const response = await fetch(`http://localhost:5000/product/${productId}/reviews`);
       if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
       const data = await response.json();
@@ -140,7 +150,6 @@ const ProductDisplay = ({ product }) => {
 
   const averageRating = reviews.length > 0 ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) : 0;
 
-  // Get the number of items in cart and favorites for this product
   const cartQuantity = product ? (cartItems[product.id] || 0) : 0;
   const favouriteQuantity = product ? (favouriteItems[product.id] || 0) : 0;
 
@@ -191,7 +200,7 @@ const ProductDisplay = ({ product }) => {
               className="productdisplay-right-size-select"
             >
               <option value="">Select a size</option>
-              {product.sizes.map((size) => (
+              {availableSizes.map((size) => (
                 <option
                   key={size.size}
                   value={size.size}

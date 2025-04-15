@@ -202,13 +202,24 @@ app.post('/addproduct', upload, async (req, res) => {
 app.get('/allproducts', async (req, res) => {
   try {
     const BASE_URL = process.env.BACKEND_URI || 'http://localhost:5000';
-    const products = await Product.find({}).lean(); 
+    const category = req.query.category; // Get the category query parameter
+    let products;
+
+    // Fetch products with optional category filter
+    if (category) {
+      products = await Product.find({ category: category }).lean();
+    } else {
+      products = await Product.find({}).lean();
+    }
+
+    // Map products to include the full image URL
     const productsWithFullUrls = products.map((product) => ({
       ...product,
       image: product.image.startsWith('http')
         ? product.image
         : `${BASE_URL}${product.image}`,
     }));
+
     res.json(productsWithFullUrls);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -767,7 +778,7 @@ app.post('/removeproduct', async (req, res) => {
   }
 });
 
-// Restock product endpoint
+//endpoint for restocking product by admin
 app.post('/restockproduct', async (req, res) => {
   try {
     const { id, sizes } = req.body;
@@ -776,7 +787,6 @@ app.post('/restockproduct', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
-    // Validate sizes
     if (!Array.isArray(sizes) || sizes.length === 0) {
       return res.status(400).json({ success: false, message: 'Sizes array is required' });
     }
@@ -793,14 +803,11 @@ app.post('/restockproduct', async (req, res) => {
       }
     }
 
-    // Update or add sizes
     sizes.forEach(sizeInput => {
       const existingSize = product.sizes.find(s => s.size === sizeInput.size);
       if (existingSize) {
-        // Update existing size quantity
         existingSize.quantity = Number(sizeInput.quantity);
       } else {
-        // Add new size
         product.sizes.push({
           size: sizeInput.size.trim(),
           quantity: Number(sizeInput.quantity),
@@ -808,9 +815,7 @@ app.post('/restockproduct', async (req, res) => {
       }
     });
 
-    // Remove sizes with quantity 0 (optional)
     product.sizes = product.sizes.filter(s => s.quantity > 0);
-
     await product.save();
     res.json({ success: true, message: 'Product restocked successfully', product });
   } catch (error) {

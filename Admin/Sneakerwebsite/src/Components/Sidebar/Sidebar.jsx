@@ -7,9 +7,18 @@ import list_product_icon from '../../assets/Product_list_icon.svg';
 const Sidebar = ({ onLogout }) => {
   return (
     <div className="sidebar">
+      <Link to="/admin/overview" style={{ textDecoration: 'none' }}>
+        <div className="sidebar-item">
+          <p>Overview</p>
+        </div>
+      </Link>
       <Link to="/admin/addproduct" style={{ textDecoration: 'none' }}>
         <div className="sidebar-item">
-          <img src={add_product_icon} alt="Add Product" />
+          <img 
+            src={add_product_icon} 
+            alt="Add Product" 
+            onError={(e) => (e.target.style.display = 'none')} // Hide image if it fails to load
+          />
           <p>Add Product</p>
         </div>
       </Link>

@@ -1,4 +1,4 @@
-.navbar{
+.navbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -6,21 +6,29 @@
     box-shadow: 0 1px 3px -2px #000;
     margin-bottom: 1px;
     background: white;
+    position: fixed; /* Make navbar fixed */
+    top: 0; /* Stick to the top */
+    left: 0;
+    width: 100%; /* Full width */
+    z-index: 1000; /* Ensure it stays above other elements */
 }
-.nav-logo{
+
+.nav-logo {
     width: 200px;
 }
-.nav-profile{
+
+.nav-profile {
     width: 75px;
 }
-@media(max-width:800px){
-    .navbar{
+
+@media(max-width:800px) {
+    .navbar {
         padding: 15px 30px;
     }
-    .nav-logo{
+    .nav-logo {
         width: 170px;
     }
-    .nav-profile{
+    .nav-profile {
         width: 60px;
     }
 }

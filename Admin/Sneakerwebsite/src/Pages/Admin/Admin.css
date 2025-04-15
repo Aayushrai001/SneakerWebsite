@@ -1,8 +1,27 @@
-.admin{
+.admin {
     display: flex;
+    height: 100vh;
 }
+
+.admin-content {
+    margin-left: 240px;
+    margin-top: 70px; /* Match the sidebar's top value */
+    padding: 20px;
+    height: calc(100vh - 70px); /* Match the sidebar's height */
+    overflow-y: auto;
+    box-sizing: border-box;
+    width: calc(100% - 240px);
+}
+
 @media(max-width:800px) {
-    .admin{
+    .admin {
         flex-direction: column;
+    }
+
+    .admin-content {
+        margin-left: 0;
+        margin-top: 110px; /* Navbar (60px) + sidebar height (approx 50px) */
+        width: 100%;
+        height: calc(100vh - 110px);
     }
 }

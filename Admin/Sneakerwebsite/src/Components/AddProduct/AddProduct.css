@@ -1,7 +1,7 @@
 .add-product {
     width: 100%;
-    max-width: 1400px; /* Increased for more space */
-    padding: 40px 70px; /* More spacious padding */
+    max-width: 1400px;
+    padding: 80px 40px; 
     margin: 0px 60px;
     background: #ffffff;
   }
@@ -9,7 +9,7 @@
   .addproduct-itemfield {
     width: 100%;
     margin-bottom: 24px;
-    color: #495057;
+    color: black;
     font-size: 16px;
     font-weight: 500;
   }

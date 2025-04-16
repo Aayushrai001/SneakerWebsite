@@ -9,6 +9,7 @@ const ShopContextProvider = (props) => {
   const [all_product, setAll_Product] = useState([]);
   const [cartItems, setCartItems] = useState(getDefaultCart());
   const [favouriteItems, setFavouriteItems] = useState(getDefaultFavourite());
+  const [userName, setUserName] = useState("");
 
   // Function to fetch all products
   const fetchAllProducts = async () => {
@@ -22,11 +23,31 @@ const ShopContextProvider = (props) => {
     }
   };
 
+  // Function to fetch username
+  const fetchUserName = async (token) => {
+    try {
+      const response = await fetch("http://localhost:5000/getusername", {
+        method: "GET",
+        headers: {
+          "auth-token": token,
+          "Content-Type": "application/json",
+        },
+      });
+      const data = await response.json();
+      if (data.success) {
+        setUserName(data.name);
+      }
+    } catch (error) {
+      console.error("Error fetching user name:", error);
+    }
+  };
+
   useEffect(() => {
     fetchAllProducts();
 
     const authToken = localStorage.getItem("auth-token");
     if (authToken) {
+      fetchUserName(authToken);
       fetch("http://localhost:5000/getcart", {
         method: "POST",
         headers: {
@@ -243,7 +264,10 @@ const ShopContextProvider = (props) => {
     decreaseFavouriteItem,
     clearCart,
     clearFavourite,
-    fetchAllProducts, // Expose fetchAllProducts to refresh product data
+    fetchAllProducts,
+    userName,
+    setUserName,
+    fetchUserName,
   };
 
   return (

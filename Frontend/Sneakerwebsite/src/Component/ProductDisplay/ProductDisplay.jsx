@@ -68,16 +68,30 @@ const ProductDisplay = ({ product }) => {
   };
 
   const handleQuantityChange = (event) => {
+    if (!selectedSize) {
+      alert('Please select a size first');
+      return;
+    }
     const newQuantity = Math.max(1, parseInt(event.target.value) || 1);
-    setQuantity(newQuantity);
+    const sizeData = product?.sizes.find(s => s.size === selectedSize);
+    if (sizeData && newQuantity <= sizeData.quantity) {
+      setQuantity(newQuantity);
+    } else {
+      alert(`Only ${sizeData.quantity} items available for size ${selectedSize}`);
+    }
   };
 
   const increaseQuantity = () => {
+    if (!selectedSize) {
+      alert('Please select a size first');
+      return;
+    }
     setQuantity((prev) => {
       const sizeData = product?.sizes.find(s => s.size === selectedSize);
       if (sizeData && prev + 1 <= sizeData.quantity) {
         return prev + 1;
       }
+      alert(`Only ${sizeData.quantity} items available for size ${selectedSize}`);
       return prev;
     });
   };

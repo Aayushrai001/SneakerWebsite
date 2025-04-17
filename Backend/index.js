@@ -21,9 +21,6 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Temporary storage for admin OTP (in-memory; use a database in production)
-const adminOtps = new Map();
-
 // Nodemailer transporter
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -31,18 +28,12 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  tls: {
-    rejectUnauthorized: false,
-  },
 });
 
 // Verify nodemailer configuration
 transporter.verify((error, success) => {
-  if (error) {
-    console.error('Nodemailer config error:', error.message);
-  } else {
-    console.log('Nodemailer ready to send emails');
-  }
+  if (error) console.error('Nodemailer config error:', error);
+  else console.log('Nodemailer ready');
 });
 
 // Define allowed origins
@@ -151,8 +142,8 @@ app.post('/addproduct', upload, async (req, res) => {
     const filename = `product_${Date.now()}${path.extname(req.file.originalname)}`;
     const imagePath = path.join(uploadDir, filename);
     await sharp(req.file.buffer)
-      .toFormat('jpeg')
-      .jpeg({ quality: 80 })
+      .toFormat('jpeg') // Convert to JPEG for consistency
+      .jpeg({ quality: 80 }) // Optimize image
       .toFile(imagePath);
     console.log('Image saved:', imagePath);
 
@@ -164,7 +155,7 @@ app.post('/addproduct', upload, async (req, res) => {
     const newProduct = new Product({
       id: newId,
       name: name.trim(),
-      image: `/images/${filename}`,
+      image: `/images/${filename}`, // Relative path for client access
       category: category.trim(),
       brand: brand.trim(),
       new_price: price,
@@ -173,7 +164,7 @@ app.post('/addproduct', upload, async (req, res) => {
         size: size.size.trim(),
         quantity: Number(size.quantity),
       })),
-      createdAt: new Date(),
+      createdAt: new Date(), // Optional: Track creation time
     });
 
     // Save product to database
@@ -211,15 +202,17 @@ app.post('/addproduct', upload, async (req, res) => {
 app.get('/allproducts', async (req, res) => {
   try {
     const BASE_URL = process.env.BACKEND_URI || 'http://localhost:5000';
-    const category = req.query.category;
+    const category = req.query.category; // Get the category query parameter
     let products;
 
+    // Fetch products with optional category filter
     if (category) {
       products = await Product.find({ category: category }).lean();
     } else {
       products = await Product.find({}).lean();
     }
 
+    // Map products to include the full image URL
     const productsWithFullUrls = products.map((product) => ({
       ...product,
       image: product.image.startsWith('http')
@@ -245,8 +238,6 @@ const Users = mongoose.model('Users', new mongoose.Schema({
   isVerified: { type: Boolean, default: false },
   verificationToken: { type: String },
   verificationTokenExpires: { type: Date },
-  resetPasswordToken: { type: String }, // New field for password reset OTP
-  resetPasswordExpires: { type: Date }, // New field for password reset OTP expiration
 }));
 
 const fetchUser = (req, res, next) => {
@@ -296,77 +287,7 @@ app.put('/user/update', fetchUser, async (req, res) => {
   }
 });
 
-// Modified /adminlogin endpoint to send OTP
-app.post('/adminlogin', async (req, res) => {
-  const { email, password } = req.body;
-  try {
-    // Validate admin credentials
-    if (email !== 'arai03178@gmail.com' || password !== 'admin@123') {
-      return res.status(401).json({ success: false, message: 'Invalid email or password' });
-    }
-
-    // Generate OTP
-    const otp = crypto.randomInt(100000, 999999).toString();
-    const otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
-
-    // Store OTP in memory (use a database in production)
-    adminOtps.set(email, { otp, expires: otpExpires });
-
-    // Send OTP email to admin email from .env
-    const mailOptions = {
-      from: `"Sneaker App Admin" <${process.env.EMAIL_USER}>`,
-      to: process.env.EMAIL_USER, // Admin email from .env
-      subject: 'Admin Login OTP',
-      html: `<p>Your OTP for admin login is: <strong>${otp}</strong>. It will expire in 10 minutes.</p>`
-    };
-
-    try {
-      await transporter.sendMail(mailOptions);
-      console.log(`Admin OTP email sent to ${process.env.EMAIL_USER}: ${otp}`);
-      res.json({ success: true, message: 'OTP sent to your email. Please verify to continue.' });
-    } catch (emailError) {
-      console.error('Failed to send admin OTP email:', emailError.message);
-      adminOtps.delete(email); // Clean up OTP on failure
-      return res.status(500).json({ success: false, message: 'Failed to send OTP. Please try again.', error: emailError.message });
-    }
-  } catch (error) {
-    console.error('Error during admin login:', error.message);
-    res.status(500).json({ success: false, message: 'Server error during admin login' });
-  }
-});
-
-// New endpoint to verify admin OTP
-app.post('/admin/verify-otp', async (req, res) => {
-  const { email, otp } = req.body;
-  try {
-    // Check if OTP exists for the email
-    const storedOtpData = adminOtps.get(email);
-    if (!storedOtpData) {
-      return res.status(400).json({ success: false, message: 'No OTP found for this email. Please try logging in again.' });
-    }
-
-    // Check if OTP has expired
-    if (storedOtpData.expires < Date.now()) {
-      adminOtps.delete(email);
-      return res.status(400).json({ success: false, message: 'OTP has expired. Please try logging in again.' });
-    }
-
-    // Verify OTP
-    if (storedOtpData.otp !== otp) {
-      return res.status(400).json({ success: false, message: 'Invalid OTP.' });
-    }
-
-    // OTP is valid; clean up and generate token
-    adminOtps.delete(email);
-    const token = Jwt.sign({ admin: { email } }, 'secret_ecom', { expiresIn: '1h' });
-    res.json({ success: true, token, message: 'OTP verified successfully.' });
-  } catch (error) {
-    console.error('Error verifying admin OTP:', error.message);
-    res.status(500).json({ success: false, message: 'Server error during OTP verification' });
-  }
-});
-
-// signup endpoint for OTP
+// Modified /signup endpoint for OTP
 app.post('/signup', async (req, res) => {
   let { name, email, password, address, phone } = req.body;
   try {
@@ -402,7 +323,7 @@ app.post('/signup', async (req, res) => {
 
     // Generate OTP
     const otp = crypto.randomInt(100000, 999999).toString();
-    const otpExpires = Date.now() + 10 * 60 * 1000;
+    const otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
 
     // Initialize cart and favorite
     const cartData = {};
@@ -427,25 +348,17 @@ app.post('/signup', async (req, res) => {
 
     // Send OTP email
     const mailOptions = {
-      from: `"Sneaker App" <${process.env.EMAIL_USER}>`,
+      from: process.env.EMAIL_USER,
       to: email,
       subject: 'Your Verification OTP',
-      html: `<p>Your OTP is: <strong>${otp}</strong>. Please enter this code to verify your account. It will expire in 10 minutes.</p>`
+      html: `<p>Your OTP is: <strong>${otp}</strong>. Please enter this code to verify your account.</p>`
     };
-
-    try {
-      await transporter.sendMail(mailOptions);
-      console.log(`OTP email sent to ${email}: ${otp}`);
-    } catch (emailError) {
-      console.error('Failed to send OTP email:', emailError.message);
-      await Users.deleteOne({ email });
-      return res.status(500).json({ success: false, message: 'Failed to send OTP email. Please try again.', error: emailError.message });
-    }
+    await transporter.sendMail(mailOptions);
 
     res.json({ success: true, message: 'OTP sent to your email. Please enter it to verify your account.' });
   } catch (error) {
-    console.error('Error during signup:', error.message);
-    res.status(500).json({ success: false, message: 'Failed to process signup. Please try again.', error: error.message });
+    console.error('Error during signup:', error);
+    res.status(500).json({ success: false, message: 'Failed to send OTP. Please try again.' });
   }
 });
 
@@ -506,7 +419,7 @@ app.post('/resend-verification', async (req, res) => {
   }
 });
 
-// Modified /verify-otp endpoint to complete signup and login
+// New /verify-otp endpoint
 app.post('/verify-otp', async (req, res) => {
   const { email, otp } = req.body;
   try {
@@ -520,99 +433,13 @@ app.post('/verify-otp', async (req, res) => {
     if (user.verificationToken !== otp || user.verificationTokenExpires < Date.now()) {
       return res.status(400).json({ success: false, message: 'Invalid or expired OTP.' });
     }
-    // Mark user as verified
     user.isVerified = true;
     user.verificationToken = undefined;
     user.verificationTokenExpires = undefined;
     await user.save();
-
-    // Generate JWT token for automatic login
-    const token = Jwt.sign({ user: { id: user.id } }, 'secret_ecom', { expiresIn: '1h' });
-
-    res.json({ success: true, message: 'Account verified and logged in successfully.', token, name: user.name });
+    res.json({ success: true, message: 'Email verified successfully.' });
   } catch (error) {
     console.error('Error verifying OTP:', error);
-    res.status(500).json({ success: false, message: 'Server error.' });
-  }
-});
-
-// New endpoint for forgot password OTP
-app.post('/forgot-password', async (req, res) => {
-  const { email } = req.body;
-  try {
-    const user = await Users.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found.' });
-    }
-
-    // Generate OTP
-    const otp = crypto.randomInt(100000, 999999).toString();
-    const otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
-
-    // Store OTP in user document
-    user.resetPasswordToken = otp;
-    user.resetPasswordExpires = otpExpires;
-    await user.save();
-
-    // Send OTP email
-    const mailOptions = {
-      from: `"Sneaker App" <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: 'Password Reset OTP',
-      html: `<p>Your OTP for password reset is: <strong>${otp}</strong>. Please enter this code to reset your password. It will expire in 10 minutes.</p>`
-    };
-
-    try {
-      await transporter.sendMail(mailOptions);
-      console.log(`Password reset OTP sent to ${email}: ${otp}`);
-      res.json({ success: true, message: 'OTP sent to your email for password reset.' });
-    } catch (emailError) {
-      console.error('Failed to send password reset OTP:', emailError.message);
-      user.resetPasswordToken = undefined;
-      user.resetPasswordExpires = undefined;
-      await user.save();
-      return res.status(500).json({ success: false, message: 'Failed to send OTP. Please try again.' });
-    }
-  } catch (error) {
-    console.error('Error in forgot-password:', error.message);
-    res.status(500).json({ success: false, message: 'Server error.' });
-  }
-});
-
-// New endpoint to reset password after OTP verification
-app.post('/reset-password', async (req, res) => {
-  const { email, otp, newPassword } = req.body;
-  try {
-    // Validate password
-    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(newPassword)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.'
-      });
-    }
-
-    const user = await Users.findOne({
-      email,
-      resetPasswordToken: otp,
-      resetPasswordExpires: { $gt: Date.now() }
-    });
-
-    if (!user) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired OTP.' });
-    }
-
-    // Hash new password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    // Update user password and clear OTP fields
-    user.password = hashedPassword;
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpires = undefined;
-    await user.save();
-
-    res.json({ success: true, message: 'Password reset successfully. You can now log in with your new password.' });
-  } catch (error) {
-    console.error('Error in reset-password:', error.message);
     res.status(500).json({ success: false, message: 'Server error.' });
   }
 });
@@ -648,7 +475,7 @@ app.post('/login', async (req, res) => {
 
     // Generate token
     const token = Jwt.sign({ user: { id: user.id } }, 'secret_ecom');
-    res.json({ success: true, token, name: user.name });
+    res.json({ success: true, token });
   } catch (error) {
     console.error('Login error:', error.stack);
     res.status(500).json({ success: false, message: 'Server error during login' });
@@ -755,7 +582,7 @@ app.post('/getfavourite', fetchUser, async (req, res) => {
 app.post('/initialize-khalti', fetchUser, async (req, res) => {
   try {
     const { cartItems, totalPrice } = req.body;
-    if (!cartItems || !totalPrice || !Array.isArray(cartItems)) {
+    if (!cartItems || !totalPrice || !Array.isArray(cartItems) || cartItems.length === 0) {
       return res.status(400).json({ success: false, message: 'Invalid request: cartItems and totalPrice required' });
     }
     const user = await Users.findById(req.user.id).select('name email');
@@ -763,49 +590,77 @@ app.post('/initialize-khalti', fetchUser, async (req, res) => {
 
     const purchasedItems = [];
     let calculatedTotalPrice = 0;
+
+    // Validate each cart item
     for (const item of cartItems) {
-      if (!item.productId || !item.quantity) {
-        return res.status(400).json({ success: false, message: 'Each item must have productId and quantity' });
+      if (!item.productId || !item.quantity || !item.size) {
+        return res.status(400).json({ success: false, message: 'Each item must have productId, quantity, and size' });
       }
       const product = await Product.findById(item.productId);
       if (!product) return res.status(404).json({ success: false, message: `Product not found: ${item.productId}` });
+
+      // Validate size availability
       const size = product.sizes.find((s) => s.size === item.size);
       if (!size || size.quantity < item.quantity) {
-        return res.status(400).json({ success: false, message: `Size ${item.size} not available or insufficient quantity` });
+        return res.status(400).json({ success: false, message: `Size ${item.size} not available or insufficient quantity for product ${product.name}` });
       }
+
+      // Calculate item total price
       const itemTotalPrice = product.new_price * item.quantity;
       calculatedTotalPrice += itemTotalPrice;
+
+      // Create purchased item
       const purchasedItem = await PurchasedItem.create({
         user: req.user.id,
         product: item.productId,
-        totalPrice: itemTotalPrice * 100,
+        totalPrice: itemTotalPrice * 100, // Store in paisa for Khalti
         quantity: item.quantity,
-        size: item.size || 'N/A',
+        size: item.size,
         productImage: product.image,
         paymentMethod: 'khalti',
       });
       purchasedItems.push(purchasedItem);
     }
-    if (calculatedTotalPrice !== totalPrice) {
+
+    // Validate total price
+    if (Math.abs(calculatedTotalPrice - totalPrice) > 0.01) {
       return res.status(400).json({ success: false, message: 'Total price mismatch' });
     }
+
+    // Prepare Khalti payment details
     const paymentDetails = {
-      amount: totalPrice * 100,
+      amount: totalPrice * 100, // Convert to paisa
       purchase_order_id: purchasedItems[0]._id.toString(),
-      purchase_order_name: 'Cart/Favourite Purchase',
+      purchase_order_name: 'Cart Purchase',
       return_url: `${process.env.BACKEND_URI}/complete-khalti-payment`,
       website_url: process.env.FRONTEND_URL || 'http://localhost:5173',
-      customer_info: { name: user.name || 'Customer', email: user.email || 'customer@example.com', phone: '9800000000' },
+      customer_info: {
+        name: user.name || 'Customer',
+        email: user.email || 'customer@example.com',
+        phone: '9800000000',
+      },
     };
+
+    // Initialize Khalti payment
     const paymentInitiate = await initializeKhaltiPayment(paymentDetails);
+
+    // Prepare order details for response
     const orderDetails = await Promise.all(
       purchasedItems.map(async (item) => {
         const product = await Product.findById(item.product);
-        return { productName: product.name, quantity: item.quantity, size: item.size, totalPrice: item.totalPrice / 100, productImage: item.productImage };
+        return {
+          productName: product.name,
+          quantity: item.quantity,
+          size: item.size,
+          totalPrice: item.totalPrice / 100, // Convert back to rupees
+          productImage: item.productImage,
+        };
       })
     );
+
     res.json({ success: true, purchasedItems, payment: paymentInitiate, orderDetails });
   } catch (error) {
+    console.error('Error initializing Khalti payment:', error);
     res.status(500).json({ success: false, message: 'Error initializing payment', error: error.message });
   }
 });
@@ -823,6 +678,7 @@ app.get('/complete-khalti-payment', async (req, res) => {
       return res.redirect(`${process.env.FRONTEND_URL}/payment-failure?reason=purchased_item_not_found_or_amount_mismatch`);
     }
 
+    // Update product size quantity
     const product = await Product.findById(purchasedItem.product);
     if (!product) {
       return res.redirect(`${process.env.FRONTEND_URL}/payment-failure?reason=product_not_found`);
@@ -849,6 +705,119 @@ app.get('/complete-khalti-payment', async (req, res) => {
       paymentGateway: 'khalti',
       status: 'success',
     });
+
+    // Fetch user details for email
+    const user = await Users.findById(purchasedItem.user).select('name email');
+    if (!user) {
+      console.error('User not found for email:', purchasedItem.user);
+    } else {
+      // Fetch all purchased items for this transaction (in case of multiple items)
+      const purchasedItems = await PurchasedItem.find({
+        user: purchasedItem.user,
+        payment: 'completed',
+        createdAt: { $gte: new Date(Date.now() - 5 * 60 * 1000) }, // Items from last 5 minutes
+      }).populate('product', 'name image');
+
+      // Prepare order details and image attachments
+      const orderDetails = [];
+      const attachments = [];
+
+      for (let i = 0; i < purchasedItems.length; i++) {
+        const item = purchasedItems[i];
+        // Extract the image filename from the productImage path (e.g., "/images/product_123.jpg")
+        const imagePath = item.productImage.startsWith('/')
+          ? path.join(__dirname, 'upload/images', path.basename(item.productImage))
+          : item.productImage;
+
+        let imageData;
+        try {
+          imageData = fs.readFileSync(imagePath);
+        } catch (err) {
+          console.error(`Failed to read image for product ${item.product.name}:`, err);
+          imageData = null; // We'll handle missing images in the email
+        }
+
+        const cid = `product_${i}_${Date.now()}`; // Unique CID for each image
+
+        // Add to order details
+        orderDetails.push({
+          productName: item.product.name,
+          quantity: item.quantity,
+          size: item.size,
+          totalPrice: (item.totalPrice / 100).toFixed(2), // Convert paisa to rupees
+          imageCid: imageData ? cid : null, // Use CID if image exists, otherwise null
+        });
+
+        // Add to attachments if image exists
+        if (imageData) {
+          attachments.push({
+            filename: path.basename(imagePath),
+            content: imageData,
+            cid: cid, // This CID will be used in the email HTML
+          });
+        }
+      }
+
+      // Calculate total amount
+      const totalAmount = orderDetails.reduce((sum, item) => sum + parseFloat(item.totalPrice), 0).toFixed(2);
+
+      // Send bill email with embedded images
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: user.email,
+        subject: 'Your Order Confirmation and Bill',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #333;">Order Confirmation</h2>
+            <p>Dear ${user.name || 'Customer'},</p>
+            <p>Thank you for your purchase! Your order has been successfully placed. Below are the details of your order:</p>
+            <h3 style="color: #333;">Order Details</h3>
+            <p><strong>Transaction ID:</strong> ${transaction_id}</p>
+            <p><strong>Order Date:</strong> ${new Date().toLocaleString()}</p>
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+              <thead>
+                <tr style="background-color: #f2f2f2;">
+                  <th style="padding: 10px; border: 1px solid #ddd;">Product</th>
+                  <th style="padding: 10px; border: 1px solid #ddd;">Image</th>
+                  <th style="padding: 10px; border: 1px solid #ddd;">Quantity</th>
+                  <th style="padding: 10px; border: 1px solid #ddd;">Size</th>
+                  <th style="padding: 10px; border: 1px solid #ddd;">Price (Rs.)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${orderDetails.map(item => `
+                  <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${item.productName}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">
+                      ${item.imageCid 
+                        ? `<img src="cid:${item.imageCid}" alt="${item.productName}" style="width: 50px; height: auto;" />`
+                        : 'No image available'}
+                    </td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${item.quantity}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${item.size}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${item.totalPrice}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            <p><strong>Total Amount:</strong> Rs. ${totalAmount}</p>
+            <p>Your order will be processed soon, and you will receive updates on the delivery status.</p>
+            <p>If you have any questions, please contact our support team.</p>
+            <p>Thank you for shopping with us!</p>
+            <p style="color: #777;">Best regards,<br>Your Company Name</p>
+          </div>
+        `,
+        attachments: attachments, // Attach the images to the email
+      };
+
+      try {
+        await transporter.sendMail(mailOptions);
+        console.log(`Bill email sent to ${user.email} with ${attachments.length} image(s) attached`);
+      } catch (emailError) {
+        console.error('Error sending bill email:', emailError);
+      }
+    }
+
     res.redirect(`${process.env.FRONTEND_URL}/payment-success?transaction_id=${transaction_id}`);
   } catch (error) {
     console.error('Error in complete-khalti-payment:', error);
@@ -861,13 +830,18 @@ app.get('/api/payments/:transactionId', async (req, res) => {
     const payment = await Payment.findOne({ transactionId: req.params.transactionId })
       .populate({ path: 'purchasedItemId', populate: { path: 'product', select: 'name image' } });
     if (!payment) return res.status(400).json({ success: false, message: 'Payment not found' });
+
+    const BASE_URL = process.env.BACKEND_URI || 'http://localhost:5000';
     const orderDetails = {
       productName: payment.purchasedItemId.product.name,
       quantity: payment.purchasedItemId.quantity,
       size: payment.purchasedItemId.size,
       totalPrice: payment.amount / 100,
-      productImage: payment.productImage,
+      productImage: payment.productImage.startsWith('http')
+        ? payment.productImage
+        : `${BASE_URL}${payment.productImage}`, // Ensure full URL
     };
+
     res.json({ success: true, payment, orderDetails });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -928,6 +902,7 @@ app.post('/removeproduct', async (req, res) => {
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
+    // Optionally, delete the image file from the server
     const imagePath = path.join(__dirname, 'upload/images', path.basename(product.image));
     if (fs.existsSync(imagePath)) {
       fs.unlinkSync(imagePath);
@@ -939,7 +914,7 @@ app.post('/removeproduct', async (req, res) => {
   }
 });
 
-// Endpoint for restocking product by admin
+//endpoint for restocking product by admin
 app.post('/restockproduct', async (req, res) => {
   try {
     const { id, sizes } = req.body;
@@ -1088,6 +1063,15 @@ app.get('/product/:productId/reviews', async (req, res) => {
     console.error('Error fetching reviews:', error);
     res.status(500).json({ success: false, message: error.message });
   }
+});
+
+app.post('/adminlogin', async (req, res) => {
+  const { email, password } = req.body;
+  if (email === 'arai03178@gmail.com' && password === 'admin@123') { 
+    const token = 'your-jwt-token';
+    return res.json({ success: true, token });
+  }
+  return res.json({ success: false, message: 'Invalid email or password' });
 });
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

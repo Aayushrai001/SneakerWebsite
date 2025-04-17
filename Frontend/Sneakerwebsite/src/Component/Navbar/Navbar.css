@@ -6,7 +6,6 @@
     padding: 15px 0;
     box-shadow: 0 1px 3px -2px black;
     background-color: white;
-    align-items: center;
 }
 
 /* Logo section */
@@ -56,6 +55,12 @@
     height: 3px;
     border-radius: 10px;
     background-color: #FF4141;
+    display: none;
+}
+
+.nav-menu li.active hr,
+.nav-menu li:hover hr {
+    display: block;
 }
 
 /* Login and Cart Section */
@@ -70,22 +75,29 @@
     position: relative;
     display: flex;
     align-items: center;
-    cursor: pointer;
 }
 
 .nav-user-name {
     font-size: 1.7rem;
     color: black;
     font-weight: 600;
-    font-style: bold;
     margin-right: 15px;
+}
+
+.nav-menu-icon {
+    width: 30px;
+    height: 30px;
     cursor: pointer;
-    transition: color 0.3s ease;
+    transition: transform 0.2s ease;
+}
+
+.nav-menu-icon:hover {
+    transform: scale(1.1);
 }
 
 .nav-user-dropdown {
     position: absolute;
-    top: 35px;
+    top: 40px;
     right: 0;
     background-color: #fff;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -100,21 +112,21 @@
 .nav-dropdown-link {
     padding: 10px 15px;
     color: black;
-    font-style: bold;
     text-decoration: none;
     font-size: 1rem;
     font-weight: 700;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .nav-dropdown-link:hover {
-    background-color: #f1f1f1;
+    background-color: #FF4141;
+    color: white;
 }
 
 .nav-dropdown-link:active {
     background-color: #e0e0e0;
+    color: black;
 }
-
 
 /* Login Button */
 .nav-login-cart button {
@@ -194,7 +206,7 @@
     }
 
     .nav-login-cart {
-        gap: 30px;
+        gap: 20px;
     }
 
     .nav-login-cart button {
@@ -206,6 +218,16 @@
     .nav-cart-count {
         margin-left: -40px;
         font-size: 12px;
+    }
+
+    .nav-user-name {
+        font-size: 1.5rem;
+        margin-right: 10px;
+    }
+
+    .nav-menu-icon {
+        width: 25px;
+        height: 25px;
     }
 }
 
@@ -226,12 +248,34 @@
     }
 
     .nav-login-cart img {
-        width: 30px;
+        width: 25px;
+        height: 25px;
     }
 
     .nav-cart-count {
         width: 18px;
         height: 18px;
+        font-size: 10px;
+    }
+
+    .nav-user-name {
+        font-size: 1.3rem;
+        margin-right: 8px;
+    }
+
+    .nav-menu-icon {
+        width: 22px;
+        height: 22px;
+    }
+
+    .nav-user-dropdown {
+        width: 160px;
+        top: 35px;
+    }
+
+    .nav-dropdown-link {
+        font-size: 0.9rem;
+        padding: 8px 12px;
     }
 }
 
@@ -264,11 +308,31 @@
     .nav-dropdown.open {
         transform: rotate(90deg);
     }
+
+    .nav-user-name {
+        font-size: 1.2rem;
+        margin-right: 5px;
+    }
+
+    .nav-menu-icon {
+        width: 20px;
+        height: 20px;
+    }
+
+    .nav-user-dropdown {
+        width: 140px;
+        top: 30px;
+    }
+
+    .nav-dropdown-link {
+        font-size: 0.85rem;
+        padding: 7px 10px;
+    }
 }
 
 @media(max-width:500px) {
     .navbar {
-        width: 8px 0px;
+        padding: 8px 0px;
         gap: 0px;
     }
 
@@ -283,5 +347,39 @@
 
     .nav-login-cart {
         transform: scale(0.8);
+        gap: 15px;
+    }
+
+    .nav-user-name {
+        font-size: 1rem;
+        margin-right: 5px;
+    }
+
+    .nav-menu-icon {
+        width: 18px;
+        height: 18px;
+    }
+
+    .nav-user-dropdown {
+        width: 120px;
+        top: 25px;
+    }
+
+    .nav-dropdown-link {
+        font-size: 0.8rem;
+        padding: 6px 8px;
+    }
+
+    .nav-login-cart img {
+        width: 20px;
+        height: 20px;
+    }
+
+    .nav-cart-count {
+        width: 16px;
+        height: 16px;
+        font-size: 9px;
+        top: -6px;
+        right: -8px;
     }
 }

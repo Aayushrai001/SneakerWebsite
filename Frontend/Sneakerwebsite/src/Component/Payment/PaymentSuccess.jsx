@@ -90,7 +90,7 @@ const PaymentSuccess = () => {
             )}
 
             <p>Your order has been successfully placed. You will receive a confirmation email shortly.</p>
-            <a href="/">Return to Home</a>
+            <a href="/" className='Return'>Return to Home</a>
         </div>
     );
 };

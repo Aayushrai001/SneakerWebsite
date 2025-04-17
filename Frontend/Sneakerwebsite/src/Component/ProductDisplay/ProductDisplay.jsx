@@ -7,7 +7,7 @@ import { ShopContext } from '../../Context/ShopContext';
 import axios from 'axios';
 
 const ProductDisplay = ({ product }) => {
-  const { addtoCart, addtoFavourite, cartItems, favouriteItems, fetchAllProducts } = useContext(ShopContext);
+  const { addtoCart, addtoFavourite, cartItems, favouriteItems } = useContext(ShopContext);
   const [showCheckout, setShowCheckout] = useState(false);
   const [selectedSize, setSelectedSize] = useState('');
   const [quantity, setQuantity] = useState(1);
@@ -20,13 +20,9 @@ const ProductDisplay = ({ product }) => {
 
   useEffect(() => {
     if (product) {
-      console.log('Product data in ProductDisplay:', product);
-      console.log('Product image URL:', product.image);
-      // Filter and sort sizes with quantity > 0 in ascending order
       const sizesWithStock = product.sizes
         .filter(size => size.quantity > 0)
         .sort((a, b) => {
-          // Convert sizes to numbers if possible, else compare as strings
           const sizeA = isNaN(a.size) ? a.size : parseFloat(a.size);
           const sizeB = isNaN(b.size) ? b.size : parseFloat(b.size);
           if (typeof sizeA === 'number' && typeof sizeB === 'number') {
@@ -41,30 +37,23 @@ const ProductDisplay = ({ product }) => {
 
   const fetchReviews = async () => {
     try {
-      const productId = product?._id || product?.id;
+      const productId = product?._id;
       if (!productId) return;
       const response = await fetch(`http://localhost:5000/product/${productId}/reviews`);
       if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
       const data = await response.json();
       if (data.success) {
-        console.log('Fetched reviews:', data.reviews);
         setReviews(data.reviews || []);
       } else {
-        console.error('Failed to fetch reviews:', data.message);
         setReviews([]);
       }
     } catch (error) {
-      console.error('Error fetching reviews:', error);
       setReviews([]);
     }
   };
 
   const handleSizeChange = (event) => {
-    const selected = event.target.value;
-    const sizeData = product?.sizes.find(s => s.size === selected);
-    if (sizeData && sizeData.quantity > 0) {
-      setSelectedSize(selected);
-    }
+    setSelectedSize(event.target.value);
   };
 
   const handleQuantityChange = (event) => {
@@ -86,7 +75,7 @@ const ProductDisplay = ({ product }) => {
       alert('Please select a size first');
       return;
     }
-    setQuantity((prev) => {
+    setQuantity(prev => {
       const sizeData = product?.sizes.find(s => s.size === selectedSize);
       if (sizeData && prev + 1 <= sizeData.quantity) {
         return prev + 1;
@@ -97,37 +86,59 @@ const ProductDisplay = ({ product }) => {
   };
 
   const decreaseQuantity = () => {
-    setQuantity((prev) => Math.max(1, prev - 1));
+    setQuantity(prev => Math.max(1, prev - 1));
   };
 
   const handleKhaltiPayment = async () => {
-    if (!selectedSize) return alert('Please select a size');
-    if (quantity < 1) return alert('Quantity must be at least 1');
-    const token = localStorage.getItem('auth-token');
-    if (!token) return alert('Please log in to proceed with payment');
-    const productId = product?._id || product?.id;
-    if (!productId) return alert('Invalid product ID');
+    if (!isLoggedIn) {
+      alert('Please log in to proceed with payment');
+      return;
+    }
+    if (!selectedSize) {
+      alert('Please select a size');
+      return;
+    }
+    if (quantity < 1) {
+      alert('Quantity must be at least 1');
+      return;
+    }
+    const productId = product?._id;
+    if (!productId) {
+      alert('Invalid product ID');
+      return;
+    }
+
+    const orderDetails = [{
+      productId,
+      productName: product.name,
+      quantity,
+      size: selectedSize,
+      totalPrice: product.new_price * quantity,
+      productImage: product.image,
+    }];
 
     try {
-      const cartItems = [{ productId, quantity, totalPrice: product.new_price * quantity, size: selectedSize }];
-      const totalPrice = product.new_price * quantity;
-      console.log('Khalti Payload:', { cartItems, totalPrice });
-      const orderDetails = { productId, productName: product.name, quantity, size: selectedSize, totalPrice, productImage: product.image };
-      localStorage.setItem('lastOrder', JSON.stringify(orderDetails));
-
       const response = await axios.post(
         'http://localhost:5000/initialize-khalti',
-        { cartItems, totalPrice },
-        { headers: { 'auth-token': token } }
+        {
+          cartItems: [{
+            productId,
+            quantity,
+            totalPrice: product.new_price * quantity,
+            size: selectedSize,
+          }],
+          totalPrice: product.new_price * quantity,
+          orderDetails, // Include orderDetails in payload
+        },
+        { headers: { 'auth-token': localStorage.getItem('auth-token') } }
       );
 
       if (response.data.success) {
         window.location.href = response.data.payment.payment_url;
       } else {
-        alert('Failed to initialize payment: ' + (response.data.message || 'Unknown error'));
+        alert(`Failed to initialize payment: ${response.data.message || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Error initiating Khalti payment:', error);
       alert(`Payment Error: ${error.response?.data?.message || error.message}`);
     }
   };
@@ -142,11 +153,15 @@ const ProductDisplay = ({ product }) => {
       return;
     }
     const sizeData = product?.sizes.find(s => s.size === selectedSize);
-    if (sizeData.quantity < quantity) {
-      alert(`Only ${sizeData.quantity} items available for size ${selectedSize}`);
+    if (!sizeData || sizeData.quantity < quantity) {
+      alert(`Only ${sizeData?.quantity || 0} items available for size ${selectedSize}`);
       return;
     }
-    addtoCart(product.id, quantity);
+    for (let i = 0; i < quantity; i++) {
+      addtoCart(product.id, selectedSize);
+    }
+    setQuantity(1);
+    setSelectedSize('');
   };
 
   const handleAddToFavourite = () => {
@@ -154,18 +169,26 @@ const ProductDisplay = ({ product }) => {
       alert('Please log in to add items to your favorites');
       return;
     }
-    addtoFavourite(product.id);
+    if (!selectedSize) {
+      alert('Please select a size');
+      return;
+    }
+    addtoFavourite(product.id, selectedSize);
+    setQuantity(1);
+    setSelectedSize('');
   };
 
   const toggleReviews = () => {
-    setShowMore(!showMore);
+    setShowMore(prev => !prev);
     setVisibleReviews(showMore ? reviews.length : 3);
   };
 
-  const averageRating = reviews.length > 0 ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) : 0;
+  const averageRating = reviews.length > 0
+    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+    : 0;
 
-  const cartQuantity = product ? (cartItems[product.id] || 0) : 0;
-  const favouriteQuantity = product ? (favouriteItems[product.id] || 0) : 0;
+  const cartQuantity = cartItems[product?.id]?.quantity || 0;
+  const favouriteQuantity = favouriteItems[product?.id]?.quantity || 0;
 
   if (!product) {
     return <div>Loading product...</div>;
@@ -181,7 +204,6 @@ const ProductDisplay = ({ product }) => {
               alt={product.name || 'Product'}
               className="productdisplay-main-img"
               onError={(e) => {
-                console.error(`Failed to load image: ${product.image}`);
                 e.target.src = 'http://localhost:5000/images/placeholder.jpg';
               }}
             />
@@ -193,7 +215,11 @@ const ProductDisplay = ({ product }) => {
           <div className="overall-rating">
             <div className="productdisplay-right-star">
               {[...Array(5)].map((_, i) => (
-                <img key={i} src={i < averageRating ? star_icon : star_dull_icon} alt="star" />
+                <img
+                  key={i}
+                  src={i < averageRating ? star_icon : star_dull_icon}
+                  alt="star"
+                />
               ))}
             </div>
             <p>{averageRating} ({reviews.length} reviews)</p>
@@ -214,12 +240,8 @@ const ProductDisplay = ({ product }) => {
               className="productdisplay-right-size-select"
             >
               <option value="">Select a size</option>
-              {availableSizes.map((size) => (
-                <option
-                  key={size.size}
-                  value={size.size}
-                  disabled={size.quantity === 0}
-                >
+              {availableSizes.map(size => (
+                <option key={size.size} value={size.size}>
                   {size.size}
                 </option>
               ))}
@@ -252,12 +274,29 @@ const ProductDisplay = ({ product }) => {
           {showCheckout && (
             <div className="checkout-container">
               <h2>Checkout</h2>
-              <div className="checkout-info"><h3>Product:</h3><p>{product.name}</p></div>
-              <div className="checkout-info"><h3>Price:</h3><p>Rs. {product.new_price}</p></div>
-              <div className="checkout-info"><h3>Selected Size:</h3><p>{selectedSize || 'Not selected'}</p></div>
-              <div className="checkout-info"><h3>Quantity:</h3><p>{quantity}</p></div>
-              <div className="checkout-info"><h3>Total Amount:</h3><h3>Rs. {product.new_price * quantity}</h3></div>
-              <div className="checkout-method"><h1>Payment Method:</h1></div>
+              <div className="checkout-info">
+                <h3>Product:</h3>
+                <p>{product.name}</p>
+              </div>
+              <div className="checkout-info">
+                <h3>Price:</h3>
+                <p>Rs. {product.new_price}</p>
+              </div>
+              <div className="checkout-info">
+                <h3>Size:</h3>
+                <p>{selectedSize || 'Not selected'}</p>
+              </div>
+              <div className="checkout-info">
+                <h3>Quantity:</h3>
+                <p>{quantity}</p>
+              </div>
+              <div className="checkout-info">
+                <h3>Total Amount:</h3>
+                <h3>Rs. {product.new_price * quantity}</h3>
+              </div>
+              <div className="checkout-method">
+                <h2>Payment Method:</h2>
+              </div>
               <button className="khalti-btn" onClick={handleKhaltiPayment}>
                 Pay with Khalti <img src={khalti} alt="Khalti" className="khalti" />
               </button>
@@ -273,11 +312,11 @@ const ProductDisplay = ({ product }) => {
           <p className="no-reviews">No approved reviews yet.</p>
         ) : (
           <div className="reviews-list">
-            {reviews.slice(0, visibleReviews).map((review) => (
+            {reviews.slice(0, visibleReviews).map(review => (
               <div key={review._id} className="review-item">
                 <div className="review-header">
                   <span className="review-username">
-                    {review.user && review.user.name ? review.user.name : 'Anonymous'}
+                    {review.user?.name || 'Anonymous'}
                   </span>
                   <span className="review-rating">
                     {[...Array(5)].map((_, i) => (
@@ -290,7 +329,7 @@ const ProductDisplay = ({ product }) => {
                   </span>
                 </div>
                 <p className="review-feedback">
-                  {review.feedback ? review.feedback : 'No feedback provided'}
+                  {review.feedback || 'No feedback provided'}
                 </p>
               </div>
             ))}

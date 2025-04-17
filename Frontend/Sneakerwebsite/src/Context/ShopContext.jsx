@@ -11,7 +11,6 @@ const ShopContextProvider = (props) => {
   const [favouriteItems, setFavouriteItems] = useState(getDefaultFavourite());
   const [userName, setUserName] = useState("");
 
-  // Function to fetch all products
   const fetchAllProducts = async () => {
     try {
       const response = await fetch("http://localhost:5000/allproducts");
@@ -23,7 +22,6 @@ const ShopContextProvider = (props) => {
     }
   };
 
-  // Function to fetch username
   const fetchUserName = async (token) => {
     try {
       const response = await fetch("http://localhost:5000/getusername", {
@@ -58,7 +56,13 @@ const ShopContextProvider = (props) => {
         body: JSON.stringify({}),
       })
         .then((response) => response.json())
-        .then((data) => setCartItems(data))
+        .then((data) => {
+          const updatedCart = {};
+          Object.keys(data).forEach((id) => {
+            updatedCart[id] = data[id];
+          });
+          setCartItems(updatedCart);
+        })
         .catch((error) => console.error("Error fetching cart data:", error));
 
       fetch("http://localhost:5000/getfavourite", {
@@ -71,16 +75,25 @@ const ShopContextProvider = (props) => {
         body: JSON.stringify({}),
       })
         .then((response) => response.json())
-        .then((data) => setFavouriteItems(data))
+        .then((data) => {
+          const updatedFavourite = {};
+          Object.keys(data).forEach((id) => {
+            updatedFavourite[id] = { quantity: data[id], size: "N/A" }; // Normalize to object with default size
+          });
+          setFavouriteItems(updatedFavourite);
+        })
         .catch((error) => console.error("Error fetching favourite data:", error));
     }
   }, []);
 
-  const addtoCart = (itemId) => {
-    setCartItems((prev) => ({
-      ...prev,
-      [itemId]: (prev[itemId] || 0) + 1,
-    }));
+  const addtoCart = (itemId, size) => {
+    setCartItems((prev) => {
+      const currentQuantity = prev[itemId.toString()] || 0;
+      return {
+        ...prev,
+        [itemId.toString()]: currentQuantity + 1,
+      };
+    });
     const authToken = localStorage.getItem("auth-token");
     if (authToken) {
       fetch("http://localhost:5000/AddToCart", {
@@ -90,7 +103,7 @@ const ShopContextProvider = (props) => {
           "auth-token": authToken,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ itemId }),
+        body: JSON.stringify({ itemId: itemId.toString(), size }),
       })
         .then((response) => response.json())
         .then((data) => console.log("Cart updated:", data))
@@ -100,10 +113,11 @@ const ShopContextProvider = (props) => {
 
   const removefromCart = (itemId) => {
     setCartItems((prev) => {
-      if (!prev[itemId] || prev[itemId] <= 0) return prev;
+      const currentQuantity = prev[itemId.toString()] || 0;
+      if (currentQuantity <= 0) return prev;
       const updatedCart = { ...prev };
-      updatedCart[itemId] -= 1;
-      if (updatedCart[itemId] === 0) delete updatedCart[itemId];
+      updatedCart[itemId.toString()] = currentQuantity - 1;
+      if (updatedCart[itemId.toString()] === 0) delete updatedCart[itemId.toString()];
       return updatedCart;
     });
     const authToken = localStorage.getItem("auth-token");
@@ -115,7 +129,7 @@ const ShopContextProvider = (props) => {
           "auth-token": authToken,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ itemId }),
+        body: JSON.stringify({ itemId: itemId.toString() }),
       })
         .then((response) => response.json())
         .then((data) => console.log("Item removed from cart:", data))
@@ -127,25 +141,25 @@ const ShopContextProvider = (props) => {
     removefromCart(itemId);
   };
 
-  const increaseCartItem = (itemId) => {
-    addtoCart(itemId);
+  const increaseCartItem = (itemId, size) => {
+    addtoCart(itemId, size);
   };
 
   const getTotalCartAmount = () => {
     return Object.entries(cartItems).reduce((total, [itemId, quantity]) => {
-      const itemInfo = all_product.find((product) => product.id === Number(itemId));
-      return itemInfo ? total + (itemInfo.new_price * quantity) : total;
+      const product = all_product.find((p) => p.id.toString() === itemId);
+      return product ? total + (product.new_price * quantity) : total;
     }, 0);
   };
 
   const getTotalCartItems = () => {
-    return Object.values(cartItems).reduce((sum, count) => sum + (count || 0), 0);
+    return Object.values(cartItems).reduce((sum, quantity) => sum + (quantity || 0), 0);
   };
 
-  const addtoFavourite = (itemId) => {
+  const addtoFavourite = (itemId, size) => {
     setFavouriteItems((prev) => ({
       ...prev,
-      [itemId]: (prev[itemId] || 0) + 1,
+      [itemId]: { quantity: (prev[itemId]?.quantity || 0) + 1, size },
     }));
     const authToken = localStorage.getItem("auth-token");
     if (authToken) {
@@ -156,7 +170,7 @@ const ShopContextProvider = (props) => {
           "auth-token": authToken,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ itemId }),
+        body: JSON.stringify({ itemId, size }),
       })
         .then((response) => response.json())
         .then((data) => console.log("Added to Favourite:", data))
@@ -166,10 +180,10 @@ const ShopContextProvider = (props) => {
 
   const removefromFavourite = (itemId) => {
     setFavouriteItems((prev) => {
-      if (!prev[itemId] || prev[itemId] <= 0) return prev;
+      if (!prev[itemId] || prev[itemId].quantity <= 0) return prev;
       const updatedFavourite = { ...prev };
-      updatedFavourite[itemId] -= 1;
-      if (updatedFavourite[itemId] === 0) delete updatedFavourite[itemId];
+      updatedFavourite[itemId] = { ...updatedFavourite[itemId], quantity: updatedFavourite[itemId].quantity - 1 };
+      if (updatedFavourite[itemId].quantity === 0) delete updatedFavourite[itemId];
       return updatedFavourite;
     });
     const authToken = localStorage.getItem("auth-token");
@@ -190,7 +204,25 @@ const ShopContextProvider = (props) => {
   };
 
   const increaseFavouriteItem = (itemId) => {
-    addtoFavourite(itemId);
+    setFavouriteItems((prev) => ({
+      ...prev,
+      [itemId]: { quantity: (prev[itemId]?.quantity || 0) + 1, size: prev[itemId]?.size },
+    }));
+    const authToken = localStorage.getItem("auth-token");
+    if (authToken) {
+      fetch("http://localhost:5000/AddToFavourite", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "auth-token": authToken,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ itemId, size: favouriteItems[itemId]?.size }),
+      })
+        .then((response) => response.json())
+        .then((data) => console.log("Favourite updated:", data))
+        .catch((error) => console.error("Error adding to favourite:", error));
+    }
   };
 
   const decreaseFavouriteItem = (itemId) => {
@@ -198,12 +230,17 @@ const ShopContextProvider = (props) => {
   };
 
   const getTotalFavouriteItems = () => {
-    return Object.values(favouriteItems).reduce((sum, count) => sum + (count || 0), 0);
+    return Object.values(favouriteItems).reduce((sum, item) => {
+      // Handle both number and object cases
+      const quantity = typeof item === 'number' ? item : (item?.quantity || 0);
+      return sum + quantity;
+    }, 0);
   };
 
   const getTotalFavouriteAmount = () => {
-    return Object.entries(favouriteItems).reduce((total, [itemId, quantity]) => {
-      const itemInfo = all_product.find((product) => product.id === Number(itemId));
+    return Object.entries(favouriteItems).reduce((total, [itemId, item]) => {
+      const quantity = typeof item === 'number' ? item : (item?.quantity || 0);
+      const itemInfo = all_product.find((product) => product.id.toString() === itemId);
       return itemInfo ? total + (itemInfo.new_price * quantity) : total;
     }, 0);
   };

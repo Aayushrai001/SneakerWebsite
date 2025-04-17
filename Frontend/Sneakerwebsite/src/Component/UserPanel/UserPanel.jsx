@@ -9,11 +9,21 @@ const UserPanel = () => {
   const [userData, setUserData] = useState({});
   const [orders, setOrders] = useState([]);
   const [reviews, setReviews] = useState([]);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    fetchUserData();
-    fetchUserOrders();
-    fetchUserReviews();
+    // Check if the user is authenticated by verifying the auth-token
+    const token = localStorage.getItem('auth-token');
+    if (!token) {
+      // If no token, redirect to login page
+      window.location.href = '/login';
+    } else {
+      setIsAuthenticated(true);
+      // Fetch user data only if authenticated
+      fetchUserData();
+      fetchUserOrders();
+      fetchUserReviews();
+    }
   }, []);
 
   const fetchUserData = async () => {
@@ -26,9 +36,15 @@ const UserPanel = () => {
       const data = await response.json();
       if (data.success) {
         setUserData(data.user);
+      } else {
+        // If the token is invalid or user data fetch fails, redirect to login
+        localStorage.removeItem('auth-token');
+        window.location.href = '/login';
       }
     } catch (error) {
       console.error('Error fetching user details:', error);
+      localStorage.removeItem('auth-token');
+      window.location.href = '/login';
     }
   };
 
@@ -40,7 +56,11 @@ const UserPanel = () => {
         headers: { 'auth-token': token },
       });
       const data = await response.json();
-      if (data.success) setOrders(data.orders);
+      if (data.success) {
+        setOrders(data.orders);
+      } else {
+        console.error('Failed to fetch orders:', data.message);
+      }
     } catch (error) {
       console.error('Error fetching orders:', error);
     }
@@ -54,7 +74,11 @@ const UserPanel = () => {
         headers: { 'auth-token': token },
       });
       const data = await response.json();
-      if (data.success) setReviews(data.reviews);
+      if (data.success) {
+        setReviews(data.reviews);
+      } else {
+        console.error('Failed to fetch reviews:', data.message);
+      }
     } catch (error) {
       console.error('Error fetching reviews:', error);
     }
@@ -65,6 +89,12 @@ const UserPanel = () => {
     window.location.href = '/login'; // Redirect to login page
   };
 
+  // If the user is not authenticated, return null to prevent rendering
+  if (!isAuthenticated) {
+    return null; // Rendering nothing while redirect happens
+  }
+
+  // Render the UserPanel only if authenticated
   return (
     <div className="user-panel">
       <aside className="sidebar">

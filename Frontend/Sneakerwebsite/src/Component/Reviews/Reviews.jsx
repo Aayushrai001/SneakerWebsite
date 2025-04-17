@@ -62,7 +62,7 @@ const Reviews = ({ reviews, orders, hasReview, fetchUserReviews }) => {
     return Array.from({ length: totalPages }, (_, i) => (
       <button
         key={i + 1}
-        className={`page-number ${currentPage === i + 1 ? 'active' : ''}`}
+        className={`reviews-page-btn ${currentPage === i + 1 ? 'reviews-page-btn-active' : ''}`}
         onClick={() => setPage(i + 1)}
       >
         {i + 1}
@@ -70,67 +70,76 @@ const Reviews = ({ reviews, orders, hasReview, fetchUserReviews }) => {
     ));
   };
 
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
   return (
-    <div className="reviews">
-      <div className="tabs">
+    <div className="review-container">
+      <h1>My Reviews</h1>
+      <div className="reviews-tab-nav">
         <button
-          className={`tab ${selectedTab === 'toBeReviewed' ? 'active' : ''}`}
+          className={`reviews-tab-btn ${selectedTab === 'toBeReviewed' ? 'reviews-tab-active' : ''}`}
           onClick={() => setSelectedTab('toBeReviewed')}
         >
           To Be Reviewed ({toBeReviewed.length})
         </button>
         <button
-          className={`tab ${selectedTab === 'history' ? 'active' : ''}`}
+          className={`reviews-tab-btn ${selectedTab === 'history' ? 'reviews-tab-active' : ''}`}
           onClick={() => setSelectedTab('history')}
         >
           History ({reviews.length})
         </button>
       </div>
 
-      <div className={`panel to-be-reviewed ${selectedTab === 'toBeReviewed' ? 'active' : ''}`}>
+      <div className={`reviews-tab-content reviews-to-be-reviewed ${selectedTab === 'toBeReviewed' ? 'reviews-tab-content-active' : ''}`}>
         {paginatedToBeReviewed.length > 0 ? (
           <>
-            <ul>
+            <ul className="reviews-list">
               {paginatedToBeReviewed.map((order) => (
-                <li key={order._id}>
-                  <div className="order-info">
-                    <img src={order.product.image} alt={order.product.name} className="review-image" />
-                    <div className="details">
-                      <p className="purchased-on">Purchased on</p>
-                      <p className="product-name">{order.product.name}</p>
-                      <p className="size">Size: {order.size || 'N/A'}</p>
+                <li key={order._id} className="reviews-item">
+                  <div className="reviews-order-details">
+                    <img src={order.product.image} alt={order.product.name} className="reviews-image" />
+                    <div className="reviews-product-info">
+                      <p className="reviews-purchased-on">Purchased on {formatDate(order.purchaseDate)}</p>
+                      <p className="reviews-product-name">{order.product.name}</p>
+                      <p className="reviews-size">Size: {order.size || 'N/A'}</p>
                     </div>
-                    <button className="toggle-review-button" onClick={() => toggleReviewForm(order._id)}>
+                    <button className="reviews-action-btn" onClick={() => toggleReviewForm(order._id)}>
                       {showReviewForm[order._id] ? 'Cancel' : 'Review'}
                     </button>
                   </div>
 
                   {showReviewForm[order._id] && (
                     <>
-                      <div className="review-modal-overlay" onClick={() => toggleReviewForm(order._id)} />
-                      <div className="review-modal">
-                        <div className="form-group">
-                          <label>Your product rating & review:</label>
-                          <div className="rating-container">
-                            <div className="rating-input">
+                      <div className="reviews-modal-overlay" onClick={() => toggleReviewForm(order._id)} />
+                      <div className="reviews-modal-content">
+                        <div className="reviews-form-group">
+                          <label className="reviews-form-label">Your product rating & review:</label>
+                          <div className="reviews-rating-section">
+                            <div className="reviews-star-rating">
                               {[1, 2, 3, 4, 5].map((star) => (
                                 <span
                                   key={star}
-                                  className={`star ${ratings[order._id] >= star ? 'filled' : ''}`}
+                                  className={`reviews-star ${ratings[order._id] >= star ? 'reviews-star-filled' : ''}`}
                                   onClick={() => handleStarClick(order._id, star)}
                                 >
                                   ⭐
                                 </span>
                               ))}
                             </div>
-                            <span className="rating-text">
+                            <span className="reviews-rating-label">
                               {ratings[order._id] || 0} {ratings[order._id] === 1 ? 'star' : 'stars'}
                             </span>
                           </div>
                           <textarea
                             id={`feedback-${order._id}`}
                             placeholder="Write your feedback here..."
-                            className="feedback-textarea"
+                            className="reviews-feedback-input"
                           />
                         </div>
                         <button
@@ -143,7 +152,7 @@ const Reviews = ({ reviews, orders, hasReview, fetchUserReviews }) => {
                             }
                             handleReviewSubmit(order._id, rating, feedback);
                           }}
-                          className="submit-button"
+                          className="reviews-submit-btn"
                         >
                           Submit Review
                         </button>
@@ -154,50 +163,54 @@ const Reviews = ({ reviews, orders, hasReview, fetchUserReviews }) => {
               ))}
             </ul>
             {totalToBeReviewedPages > 1 && (
-              <div className="pagination">
+              <div className="reviews-pagination">
                 {renderPaginationNumbers(toBeReviewedPage, totalToBeReviewedPages, setToBeReviewedPage)}
               </div>
             )}
           </>
         ) : (
-          <p className="no-items">No orders available for review.</p>
+          <p className="reviews-no-items">No orders available for review.</p>
         )}
       </div>
 
-      <div className={`panel history ${selectedTab === 'history' ? 'active' : ''}`}>
+      <div className={`reviews-tab-content reviews-history ${selectedTab === 'history' ? 'reviews-tab-content-active' : ''}`}>
         {paginatedHistory.length > 0 ? (
           <>
-            <ul>
-              {paginatedHistory.map((review) => (
-                <li key={review._id}>
-                  <div className="order-info">
-                    <img src={review.product.image} alt={review.product.name} className="review-image" />
-                    <div className="details">
-                      <p className="purchased-on">Purchased on</p>
-                      <p className="product-name">{review.product.name}</p>
-                      <p className="size">Size: {review.size || 'N/A'}</p>
+            <ul className="reviews-list">
+              {paginatedHistory.map((review) => {
+                const correspondingOrder = orders.find(order => order._id.toString() === review.purchasedItem.toString());
+                return (
+                  <li key={review._id} className="reviews-item">
+                    <div className="reviews-order-details">
+                      <img src={review.product.image} alt={review.product.name} className="reviews-image" />
+                      <div className="reviews-product-info">
+                        <p className="reviews-purchased-on">
+                          Purchased on {correspondingOrder ? formatDate(correspondingOrder.purchaseDate) : 'Unknown Date'}
+                        </p>
+                        <p className="reviews-product-name">{review.product.name}</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="review-details">
-                    <div className="rating-container">
-                      <p className="rating-display">{'⭐'.repeat(review.rating)}</p>
-                      <span className="rating-text">
-                        {review.rating} {review.rating === 1 ? 'star' : 'stars'}
-                      </span>
+                    <div className="reviews-feedback">
+                      <div className="reviews-rating-section">
+                        <p className="reviews-rating-display">{'⭐'.repeat(review.rating)}</p>
+                        <span className="reviews-rating-label">
+                          {review.rating} {review.rating === 1 ? 'star' : 'stars'}
+                        </span>
+                      </div>
+                      <p className="reviews-feedback-text">Feedback: {review.feedback}</p>
                     </div>
-                    <p>Feedback: {review.feedback}</p>
-                  </div>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
             {totalHistoryPages > 1 && (
-              <div className="pagination">
+              <div className="reviews-pagination">
                 {renderPaginationNumbers(historyPage, totalHistoryPages, setHistoryPage)}
               </div>
             )}
           </>
         ) : (
-          <p className="no-items">No reviews submitted yet.</p>
+          <p className="reviews-no-items">No reviews submitted yet.</p>
         )}
       </div>
     </div>

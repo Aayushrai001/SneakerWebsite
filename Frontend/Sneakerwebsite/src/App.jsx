@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Routes, Route } from 'react-router-dom'; // Remove BrowserRouter import
+import { Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './Component/Navbar/Navbar';
 import Shop from './Pages/Shop';
 import ShopCategory from './Pages/ShopCategory';
@@ -19,6 +19,7 @@ import PaymentFailure from './Component/Payment/PaymentFailure';
 
 function App() {
   const [count, setCount] = useState(0);
+  const location = useLocation(); // Get current route
 
   return (
     <div>
@@ -40,7 +41,7 @@ function App() {
         <Route path="/payment-success" element={<PaymentSuccess />} />
         <Route path="/payment-failure" element={<PaymentFailure />} />
       </Routes>
-      <Footer />
+      {location.pathname !== '/UserPanel' && <Footer />}
     </div>
   );
 }

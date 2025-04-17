@@ -13,31 +13,32 @@ const Login = () => {
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
-
+  
     // Basic validation
     if (!email || !password) {
       setError('Please fill in all fields');
       return;
     }
-
+  
     if (!/\S+@\S+\.\S+/.test(email)) {
       setError('Please enter a valid email');
       return;
     }
-
+  
     try {
-      // Make API call to initiate admin login and send OTP
+      console.log('Sending login request:', { email, password }); // Debug input
       const response = await fetch('http://localhost:5000/adminlogin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-
+  
       const data = await response.json();
+      console.log('Backend response:', data); // Debug response
       if (data.success) {
         setError('');
         setMessage(data.message);
-        setStep('otp'); // Move to OTP entry step
+        setStep('otp');
       } else {
         setError(data.message || 'Invalid email or password');
         setMessage('');

@@ -1,5 +1,8 @@
 /* Navbar container */
 .navbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
     display: flex;
     justify-content: space-around;
     align-items: center;
@@ -187,6 +190,7 @@
     display: none;
 }
 
+/* Responsive Styles */
 @media(max-width:1280px) {
     .navbar {
         padding: 12px 50px;

@@ -804,7 +804,7 @@ app.get('/complete-khalti-payment', async (req, res) => {
             <p>Your order will be processed soon, and you will receive updates on the delivery status.</p>
             <p>If you have any questions, please contact our support team.</p>
             <p>Thank you for shopping with us!</p>
-            <p style="color: #777;">Best regards,<br>Your Company Name</p>
+            <p style="color: #777;">Best regards,<br>Sneaker.Np</p>
           </div>
         `,
         attachments: attachments, // Attach the images to the email
@@ -860,21 +860,51 @@ app.post('/clearfavourite', fetchUser, async (req, res) => {
 
 app.get('/user/orders', fetchUser, async (req, res) => {
   try {
+    const BASE_URL = process.env.BACKEND_URI || 'http://localhost:5000';
     const orders = await PurchasedItem.find({ user: req.user.id })
-      .populate('product', 'name image');
-    res.json({ success: true, orders });
+      .populate('product', 'name image')
+      .lean(); // Use lean() for better performance and to allow modification
+
+    // Map orders to include full image URL
+    const ordersWithFullUrls = orders.map((order) => ({
+      ...order,
+      product: {
+        ...order.product,
+        image: order.product.image.startsWith('http')
+          ? order.product.image
+          : `${BASE_URL}${order.product.image}`,
+      },
+    }));
+
+    res.json({ success: true, orders: ordersWithFullUrls });
   } catch (error) {
+    console.error('Error fetching user orders:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
 app.get('/user/reviews', fetchUser, async (req, res) => {
   try {
+    const BASE_URL = process.env.BACKEND_URI || 'http://localhost:5000';
     const reviews = await Review.find({ user: req.user.id })
       .populate('product', 'name image')
-      .sort({ date: -1 });
-    res.json({ success: true, reviews });
+      .sort({ date: -1 })
+      .lean(); // Use lean() for better performance and to allow modification
+
+    // Map reviews to include full image URL
+    const reviewsWithFullUrls = reviews.map((review) => ({
+      ...review,
+      product: {
+        ...review.product,
+        image: review.product.image.startsWith('http')
+          ? review.product.image
+          : `${BASE_URL}${review.product.image}`,
+      },
+    }));
+
+    res.json({ success: true, reviews: reviewsWithFullUrls });
   } catch (error) {
+    console.error('Error fetching user reviews:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -890,6 +920,7 @@ app.post('/user/review', fetchUser, async (req, res) => {
     await review.save();
     res.json({ success: true, message: 'Review submitted successfully', review });
   } catch (error) {
+    console.error('Error submitting review:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -1065,13 +1096,123 @@ app.get('/product/:productId/reviews', async (req, res) => {
   }
 });
 
+// Admin schema for OTP storage
+const AdminSession = mongoose.model('AdminSession', new mongoose.Schema({
+  email: { type: String, required: true },
+  otp: { type: String },
+  otpExpires: { type: Date },
+  createdAt: { type: Date, default: Date.now, expires: '1h' } // Auto-delete after 1 hour
+}));
+
+// Admin login endpoint
 app.post('/adminlogin', async (req, res) => {
-  const { email, password } = req.body;
-  if (email === 'arai03178@gmail.com' && password === 'admin@123') { 
-    const token = 'your-jwt-token';
-    return res.json({ success: true, token });
+  try {
+    const { email, password } = req.body;
+    console.log('Admin login attempt:', { email }); // Debug request
+
+    // Validate input
+    if (!email || !password) {
+      console.log('Validation failed: Missing email or password');
+      return res.status(400).json({ success: false, message: 'Email and password are required' });
+    }
+
+    // Check if email matches .env
+    if (email !== process.env.EMAIL_USER) {
+      console.log('Validation failed: Invalid email');
+      return res.status(400).json({ success: false, message: 'Invalid email' });
+    }
+
+    // Check password
+    const isPasswordValid = password === process.env.ADMIN_PASSWORD;
+    if (!isPasswordValid) {
+      console.log('Validation failed: Invalid password');
+      return res.status(400).json({ success: false, message: 'Invalid password' });
+    }
+
+    // Generate OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const otpExpires = Date.now() + 10 * 60 * 1000;
+
+    // Store OTP
+    await AdminSession.findOneAndUpdate(
+      { email },
+      { email, otp, otpExpires },
+      { upsert: true, new: true }
+    );
+
+    // Send OTP email
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Admin Login OTP',
+      html: `<p>Your OTP for admin login is: <strong>${otp}</strong>. This code expires in 10 minutes.</p>`
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log('OTP sent to:', email);
+    res.json({ success: true, message: 'OTP sent to your email' });
+  } catch (error) {
+    console.error('Admin login error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
-  return res.json({ success: false, message: 'Invalid email or password' });
+});
+
+// OTP verification endpoint
+app.post('/admin/verify-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    // Validate input
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, message: 'Email and OTP are required' });
+    }
+
+    // Find admin session
+    const session = await AdminSession.findOne({ email });
+    if (!session) {
+      return res.status(400).json({ success: false, message: 'No active session found' });
+    }
+
+    // Verify OTP and expiration
+    if (session.otp !== otp || session.otpExpires < Date.now()) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+    }
+
+    // Generate JWT token
+    const token = Jwt.sign({ admin: { email } }, 'secret_ecom', { expiresIn: '24h' });
+
+    // Clean up session
+    await AdminSession.deleteOne({ email });
+
+    res.json({ success: true, token, message: 'OTP verified successfully' });
+  } catch (error) {
+    console.error('OTP verification error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Middleware to protect admin routes
+const verifyAdmin = (req, res, next) => {
+  const token = req.header('auth-token');
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'Access denied: No token provided' });
+  }
+
+  try {
+    const verified = Jwt.verify(token, 'secret_ecom');
+    if (!verified.admin) {
+      return res.status(401).json({ success: false, message: 'Not authorized as admin' });
+    }
+    req.admin = verified.admin;
+    next();
+  } catch (error) {
+    res.status(401).json({ success: false, message: 'Invalid token' });
+  }
+};
+
+// Example protected admin route
+app.get('/admin/protected', verifyAdmin, (req, res) => {
+  res.json({ success: true, message: 'Welcome to the admin dashboard' });
 });
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

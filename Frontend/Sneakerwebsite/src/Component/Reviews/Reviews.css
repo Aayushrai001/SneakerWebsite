@@ -1,144 +1,159 @@
-.Reviews {
-    width: 80%;
-    padding: 20px;
-    margin-bottom: 20px;
-    margin-left: 155px;
-    margin-top: 10px;
-  }
-  
-  .Reviews-navigator {
-    margin-bottom: 20px;
-  }
-  
-  .Reviews-nav-fade {
-    font-size: 24px;
-    font-weight: bold;
-  }
-  
-  .Users-Reviews {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
-  
-  .User-Review {
-    border: 1px solid #ddd;
-    padding: 15px;
-    border-radius: 5px;
-  }
-  
-  .User-Review-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-  }
-  
-  .User-Review-user {
-    font-weight: bold;
-  }
-  
-  .User-Review-rating .star {
-    color: gold;
-  }
-  
-  .User-Review-rating .star.empty {
-    color: lightgray;
-  }
-  
-  .User-Review-text {
-    font-size: 16px;
-  }
-  
-  .See-More-Container {
-    display: flex;
-    justify-content: center;
-    margin-top: 20px;
-  }
-  
-  .See-More-Button {
-    padding: 10px 20px;
-    background-color: #ff4141;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 16px;
-  }
-  
-  .See-More-Button:hover {
-    background-color: #d32f2f;
-  }
-  
-  /* Responsive Design */
-  @media (max-width: 1280px) {
-    .Reviews {
-      width: 90%;
-      margin-left: 50px;
-    }
-  
-    .Reviews-nav-fade {
-      font-size: 22px;
-    }
-  
-    .User-Review-text {
-      font-size: 15px;
-    }
-  }
-  
-  @media (max-width: 1024px) {
-    .Reviews {
-      width: 95%;
-      margin-left: 20px;
-    }
-  
-    .Reviews-nav-fade {
-      font-size: 20px;
-    }
-  
-    .User-Review-text {
-      font-size: 14px;
-    }
-  }
-  
-  @media (max-width: 800px) {
-    .Reviews {
-      width: 100%;
-      margin-left: 10px;
-      padding: 15px;
-    }
-  
-    .Reviews-nav-fade {
-      font-size: 18px;
-    }
-  
-    .User-Review-text {
-      font-size: 13px;
-    }
-  
-    .See-More-Button {
-      font-size: 15px;
-    }
-  }
-  
-  @media (max-width: 500px) {
-    .Reviews {
-      width: 100%;
-      margin-left: 0;
-      padding: 10px;
-    }
-  
-    .Reviews-nav-fade {
-      font-size: 16px;
-    }
-  
-    .User-Review-text {
-      font-size: 12px;
-    }
-  
-    .See-More-Button {
-      font-size: 14px;
-      padding: 8px 16px;
-    }
-  }
-  
+.reviews {
+  padding: 20px;
+  font-family: 'Arial', sans-serif;
+}
+
+.tabs {
+  display: flex;
+  margin-bottom: 20px;
+  gap: 10px;
+}
+
+.tab {
+  padding: 10px 20px;
+  cursor: pointer;
+  background: #eee;
+  border-radius: 5px;
+  border: none;
+}
+
+.tab.active {
+  background-color: #007bff;
+  color: white;
+}
+
+.panel {
+  display: none;
+}
+
+.panel.active {
+  display: block;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  margin-bottom: 15px;
+  padding: 15px;
+}
+
+.order-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.review-image {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.details {
+  flex-grow: 1;
+  margin-left: 20px;
+}
+
+.toggle-review-button {
+  padding: 8px 15px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.review-details {
+  margin-top: 10px;
+  padding-left: 10px;
+}
+
+.rating-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rating-input .star {
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.rating-input .star.filled {
+  color: gold;
+}
+
+.rating-text {
+  font-weight: bold;
+}
+
+.feedback-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+.submit-button {
+  margin-top: 10px;
+  padding: 10px;
+  width: 100%;
+  background-color: #007bff;
+  border: none;
+  border-radius: 5px;
+  color: white;
+  cursor: pointer;
+}
+
+.pagination {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.page-number {
+  margin: 0 5px;
+  padding: 5px 12px;
+  border: 1px solid #007bff;
+  border-radius: 4px;
+  background: white;
+  color: #007bff;
+  cursor: pointer;
+}
+
+.page-number.active {
+  background-color: #007bff;
+  color: white;
+}
+
+/* Modal Styles */
+.review-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+.review-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 90%;
+  max-width: 500px;
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  box-shadow: 0px 10px 25px rgba(0, 0, 0, 0.2);
+}

@@ -9,8 +9,7 @@ const reviewSchema = new mongoose.Schema({
   date: { type: Date, default: Date.now },
   status: { 
     type: String, 
-    enum: ['Pending', 'Approved', 'Deleted'], 
-    default: 'Pending' 
+    default: 'Complete' 
   }, 
 }, { timestamps: true });
 

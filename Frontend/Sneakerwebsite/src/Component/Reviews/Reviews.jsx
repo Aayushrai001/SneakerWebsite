@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './Reviews.css';
+import { toast } from 'react-hot-toast';
 
 const Reviews = ({ reviews, orders, hasReview, fetchUserReviews }) => {
   const [selectedTab, setSelectedTab] = useState('toBeReviewed');
@@ -22,9 +23,9 @@ const Reviews = ({ reviews, orders, hasReview, fetchUserReviews }) => {
         fetchUserReviews();
         toggleReviewForm(orderId);
         setRatings((prev) => ({ ...prev, [orderId]: undefined }));
-        alert('Review submitted successfully!');
+        toast.success('Review submitted successfully!');
       } else {
-        alert(data.message);
+        toast(data.message);
       }
     } catch (error) {
       console.error('Error submitting review:', error);
@@ -147,7 +148,7 @@ const Reviews = ({ reviews, orders, hasReview, fetchUserReviews }) => {
                             const rating = ratings[order._id] || 0;
                             const feedback = document.getElementById(`feedback-${order._id}`).value;
                             if (rating === 0) {
-                              alert('Please select a rating!');
+                              toast('Please select a rating!');
                               return;
                             }
                             handleReviewSubmit(order._id, rating, feedback);

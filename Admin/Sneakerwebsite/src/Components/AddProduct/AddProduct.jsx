@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './AddProduct.css';
 import upload_area from '../../assets/upload_area.svg';
+import { toast } from 'react-hot-toast';
 
 const AddProduct = () => {
   const [image, setImage] = useState(null);
@@ -18,7 +19,7 @@ const AddProduct = () => {
     if (e.target.files.length > 0) {
       const file = e.target.files[0];
       if (!['image/jpeg', 'image/png'].includes(file.type)) {
-        setError('Only .jpg and .png files are allowed');
+        toast.errorr('Only .jpg and .png files are allowed');
         return;
       }
       setImage(file);
@@ -59,26 +60,26 @@ const AddProduct = () => {
       !productDetails.description.trim() ||
       !image
     ) {
-      setError('Please fill all required fields and upload an image.');
+      toast.error('Please fill all required fields and upload an image.');
       return;
     }
 
     // Validate price
     const price = parseFloat(productDetails.new_price);
     if (isNaN(price) || price <= 0) {
-      setError('Price must be a positive number.');
+      toast.error('Price must be a positive number.');
       return;
     }
 
     // Validate sizes
     for (const size of sizes) {
       if (!size.size.trim()) {
-        setError('Size cannot be empty.');
+        toast.error('Size cannot be empty.');
         return;
       }
       const qty = parseInt(size.quantity);
       if (isNaN(qty) || qty < 0) {
-        setError('Quantity must be a non-negative number.');
+        toast.error('Quantity must be a non-negative number.');
         return;
       }
     }
@@ -100,7 +101,7 @@ const AddProduct = () => {
 
       const data = await response.json();
       if (data.success) {
-        alert('Product Added Successfully'); 
+        toast.success('Product Added Successfully'); 
         setProductDetails({
           name: '',
           category: 'men',
@@ -111,11 +112,11 @@ const AddProduct = () => {
         setSizes([{ size: '', quantity: '' }]);
         setImage(null);
       } else {
-        setError(data.message || 'Failed to add product');
+        toast.error(data.message || 'Failed to add product');
       }
     } catch (error) {
       console.error('Error adding product:', error);
-      setError('Error adding product: ' + error.message);
+      toast.error('Error adding product: ' + error.message);
     }
   };
 

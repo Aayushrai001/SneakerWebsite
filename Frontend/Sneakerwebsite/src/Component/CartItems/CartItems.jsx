@@ -21,62 +21,52 @@ const CartItems = () => {
     );
   }
 
-  const increaseCartItem = (itemId, size) => {
-    addtoCart(itemId, size);
+  const increaseCartItem = (itemId) => {
+    addtoCart(itemId, cartItems[itemId]?.size);
   };
 
   const handleKhaltiPayment = async () => {
     if (!token) {
-      alert('Please log in to proceed with payment');
-      return;
+        alert('Please log in to proceed with payment');
+        return;
     }
 
-    // Map cart items to match backend structure
-    const cartProducts = all_product
-      .filter((product) => cartItems[product.id.toString()] > 0)
-      .map((product) => ({
+    const cartProducts = all_product.filter(product => cartItems[product.id] > 0);
+    const orderDetails = cartProducts.map(product => ({
         productId: product._id,
-        quantity: cartItems[product.id.toString()] || 0,
-        size: all_product.find(p => p.id === Number(product.id))?.sizes?.[0]?.size || 'N/A',
-        totalPrice: (product.new_price || 0) * (cartItems[product.id.toString()] || 0),
-      }));
-
-    if (cartProducts.length === 0) {
-      alert('Your cart is empty. Add items to proceed with payment.');
-      return;
-    }
-
-    const orderDetails = cartProducts.map((item) => ({
-      productId: item.productId,
-      productName: all_product.find((p) => p._id === item.productId)?.name || 'Unknown',
-      quantity: item.quantity,
-      size: item.size,
-      totalPrice: item.totalPrice,
-      productImage: all_product.find((p) => p._id === item.productId)?.image || '',
+        productName: product.name,
+        quantity: cartItems[product.id],
+        size: sizes[product.id] || 'Not selected',
+        totalPrice: product.new_price * cartItems[product.id],
+        productImage: product.image,
     }));
 
     localStorage.setItem('lastOrder', JSON.stringify(orderDetails));
 
     try {
-      const response = await axios.post(
-        'http://localhost:5000/initialize-khalti',
-        {
-          cartItems: cartProducts,
-          totalPrice: getTotalCartAmount(),
-        },
-        { headers: { 'auth-token': token } }
-      );
+        const response = await axios.post(
+            'http://localhost:5000/initialize-khalti',
+            {
+                cartItems: Object.entries(cartItems).filter(([_, qty]) => qty > 0).map(([id, quantity]) => ({
+                    productId: all_product.find(p => p.id === Number(id))?._id,
+                    quantity,
+                    totalPrice: all_product.find(p => p.id === Number(id)).new_price * quantity,
+                    size: sizes[id] || 'N/A',
+                })),
+                totalPrice: getTotalCartAmount(),
+            },
+            { headers: { 'auth-token': token } }
+        );
 
-      if (response.data.success) {
-        await axios.post('http://localhost:5000/clearcart', {}, { headers: { 'auth-token': token } });
-        window.location.href = response.data.payment.payment_url;
-      } else {
-        alert('Failed to initialize payment: ' + (response.data.message || 'Unknown error'));
-      }
+        if (response.data.success) {
+            window.location.href = response.data.payment.payment_url;
+        } else {
+            alert('Failed to initialize payment: ' + (response.data.message || 'Unknown error'));
+        }
     } catch (error) {
-      alert(`Payment Error: ${error.response?.data?.message || error.message}`);
+        alert(`Payment Error: ${error.response?.data?.message || error.message}`);
     }
-  };
+};
 
   return (
     <div className='cartitems'>
@@ -91,19 +81,19 @@ const CartItems = () => {
       </div>
       <hr />
       {all_product.map((product) => (
-        cartItems[product.id.toString()] > 0 && (
+        cartItems[product.id]?.quantity > 0 && (
           <div key={product.id}>
             <div className="cartitems-format">
               <img src={product.image} alt={product.name} className='carticon-product-icon' />
               <p>{product.name}</p>
               <p>Rs.{product.new_price}</p>
-              <p>{all_product.find(p => p.id === Number(product.id))?.sizes?.[0]?.size || 'N/A'}</p>
+              <p>{cartItems[product.id].size || 'N/A'}</p>
               <div className="cartitem-quantity-controls">
                 <button onClick={() => decreaseCartItem(product.id)}>-</button>
-                <span>{cartItems[product.id.toString()]}</span>
-                <button onClick={() => increaseCartItem(product.id, all_product.find(p => p.id === Number(product.id))?.sizes?.[0]?.size)}>+</button>
+                <span>{cartItems[product.id].quantity}</span>
+                <button onClick={() => increaseCartItem(product.id)}>+</button>
               </div>
-              <p>Rs.{(product.new_price || 0) * (cartItems[product.id.toString()] || 0)}</p>
+              <p>Rs.{product.new_price * cartItems[product.id].quantity}</p>
               <img
                 src={remove_icon}
                 onClick={() => removefromCart(product.id)}
@@ -138,7 +128,7 @@ const CartItems = () => {
           {showCheckout && (
             <div className="checkout-container">
               <h2>Checkout</h2>
-              {all_product.filter(product => cartItems[product.id.toString()] > 0).map(product => (
+              {all_product.filter(product => cartItems[product.id]?.quantity > 0).map(product => (
                 <div key={product.id} className="checkout-info">
                   <div>
                     <h3>Product:</h3>
@@ -150,15 +140,15 @@ const CartItems = () => {
                   </div>
                   <div>
                     <h3>Size:</h3>
-                    <p>{all_product.find(p => p.id === Number(product.id))?.sizes?.[0]?.size || 'N/A'}</p>
+                    <p>{cartItems[product.id].size || 'N/A'}</p>
                   </div>
                   <div>
                     <h3>Quantity:</h3>
-                    <p>{cartItems[product.id.toString()]}</p>
+                    <p>{cartItems[product.id].quantity}</p>
                   </div>
                   <div>
                     <h3>Total:</h3>
-                    <p>Rs.{(product.new_price || 0) * (cartItems[product.id.toString()] || 0)}</p>
+                    <p>Rs.{product.new_price * cartItems[product.id].quantity}</p>
                   </div>
                 </div>
               ))}

@@ -6,10 +6,11 @@ const reviewSchema = new mongoose.Schema({
   purchasedItem: { type: mongoose.Schema.Types.ObjectId, ref: 'PurchasedItem', required: true },
   rating: { type: Number, min: 1, max: 5, required: true },
   feedback: { type: String, required: true },
+  adminFeedback: { type: String }, 
   date: { type: Date, default: Date.now },
   status: { 
     type: String, 
-    default: 'Complete' 
+    default: 'Complete'
   }, 
 }, { timestamps: true });
 

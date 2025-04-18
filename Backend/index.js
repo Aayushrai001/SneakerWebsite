@@ -667,26 +667,51 @@ app.post('/initialize-khalti', fetchUser, async (req, res) => {
 
 app.get('/complete-khalti-payment', async (req, res) => {
   const { pidx, transaction_id, amount, purchase_order_id, status } = req.query;
+  console.log('Received complete-khalti-payment request:', { pidx, transaction_id, amount, purchase_order_id, status });
+
   try {
-    if (status === 'failed') return res.redirect(`${process.env.FRONTEND_URL}/payment-failure?reason=insufficient_balance`);
-    const paymentInfo = await verifyKhaltiPayment(pidx);
-    if (paymentInfo.status !== 'Completed' || paymentInfo.transaction_id !== transaction_id || Number(paymentInfo.total_amount) !== Number(amount)) {
-      return res.redirect(`${process.env.FRONTEND_URL}/payment-failure?reason=verification_failed`);
-    }
-    const purchasedItem = await PurchasedItem.findById(purchase_order_id);
-    if (!purchasedItem || purchasedItem.totalPrice !== Number(amount)) {
-      return res.redirect(`${process.env.FRONTEND_URL}/payment-failure?reason=purchased_item_not_found_or_amount_mismatch`);
+    // Ensure FRONTEND_URL is defined
+    if (!process.env.FRONTEND_URL) {
+      console.error('FRONTEND_URL is not defined in environment variables');
+      return res.status(500).json({ success: false, message: 'Server configuration error: FRONTEND_URL not set' });
     }
 
-    // Update product size quantity
+    if (status === 'failed') {
+      const failureRedirectUrl = `${process.env.FRONTEND_URL}/payment-failure?reason=insufficient_balance`;
+      console.log('Payment failed, redirecting to:', failureRedirectUrl);
+      return res.redirect(failureRedirectUrl);
+    }
+
+    const paymentInfo = await verifyKhaltiPayment(pidx);
+    console.log('Payment verification result:', paymentInfo);
+
+    if (paymentInfo.status !== 'Completed' || paymentInfo.transaction_id !== transaction_id || Number(paymentInfo.total_amount) !== Number(amount)) {
+      const failureRedirectUrl = `${process.env.FRONTEND_URL}/payment-failure?reason=verification_failed`;
+      console.log('Verification failed, redirecting to:', failureRedirectUrl);
+      return res.redirect(failureRedirectUrl);
+    }
+
+    const purchasedItem = await PurchasedItem.findById(purchase_order_id);
+    if (!purchasedItem || purchasedItem.totalPrice !== Number(amount)) {
+      const failureRedirectUrl = `${process.env.FRONTEND_URL}/payment-failure?reason=purchased_item_not_found_or_amount_mismatch`;
+      console.log('Purchased item not found or amount mismatch, redirecting to:', failureRedirectUrl);
+      return res.redirect(failureRedirectUrl);
+    }
+
     const product = await Product.findById(purchasedItem.product);
     if (!product) {
-      return res.redirect(`${process.env.FRONTEND_URL}/payment-failure?reason=product_not_found`);
+      const failureRedirectUrl = `${process.env.FRONTEND_URL}/payment-failure?reason=product_not_found`;
+      console.log('Product not found, redirecting to:', failureRedirectUrl);
+      return res.redirect(failureRedirectUrl);
     }
+
     const sizeIndex = product.sizes.findIndex(s => s.size === purchasedItem.size);
     if (sizeIndex === -1) {
-      return res.redirect(`${process.env.FRONTEND_URL}/payment-failure?reason=size_not_found`);
+      const failureRedirectUrl = `${process.env.FRONTEND_URL}/payment-failure?reason=size_not_found`;
+      console.log('Size not found, redirecting to:', failureRedirectUrl);
+      return res.redirect(failureRedirectUrl);
     }
+
     const newQuantity = Math.max(0, product.sizes[sizeIndex].quantity - purchasedItem.quantity);
     product.sizes[sizeIndex].quantity = newQuantity;
     await product.save();
@@ -706,25 +731,22 @@ app.get('/complete-khalti-payment', async (req, res) => {
       status: 'success',
     });
 
-    // Fetch user details for email
+    // Send confirmation email
     const user = await Users.findById(purchasedItem.user).select('name email');
     if (!user) {
       console.error('User not found for email:', purchasedItem.user);
     } else {
-      // Fetch all purchased items for this transaction (in case of multiple items)
       const purchasedItems = await PurchasedItem.find({
         user: purchasedItem.user,
         payment: 'completed',
-        createdAt: { $gte: new Date(Date.now() - 5 * 60 * 1000) }, // Items from last 5 minutes
+        createdAt: { $gte: new Date(Date.now() - 5 * 60 * 1000) },
       }).populate('product', 'name image');
 
-      // Prepare order details and image attachments
       const orderDetails = [];
       const attachments = [];
 
       for (let i = 0; i < purchasedItems.length; i++) {
         const item = purchasedItems[i];
-        // Extract the image filename from the productImage path (e.g., "/images/product_123.jpg")
         const imagePath = item.productImage.startsWith('/')
           ? path.join(__dirname, 'upload/images', path.basename(item.productImage))
           : item.productImage;
@@ -734,34 +756,29 @@ app.get('/complete-khalti-payment', async (req, res) => {
           imageData = fs.readFileSync(imagePath);
         } catch (err) {
           console.error(`Failed to read image for product ${item.product.name}:`, err);
-          imageData = null; // We'll handle missing images in the email
+          imageData = null;
         }
 
-        const cid = `product_${i}_${Date.now()}`; // Unique CID for each image
-
-        // Add to order details
+        const cid = `product_${i}_${Date.now()}`;
         orderDetails.push({
           productName: item.product.name,
           quantity: item.quantity,
           size: item.size,
-          totalPrice: (item.totalPrice / 100).toFixed(2), // Convert paisa to rupees
-          imageCid: imageData ? cid : null, // Use CID if image exists, otherwise null
+          totalPrice: (item.totalPrice / 100).toFixed(2),
+          imageCid: imageData ? cid : null,
         });
 
-        // Add to attachments if image exists
         if (imageData) {
           attachments.push({
             filename: path.basename(imagePath),
             content: imageData,
-            cid: cid, // This CID will be used in the email HTML
+            cid: cid,
           });
         }
       }
 
-      // Calculate total amount
       const totalAmount = orderDetails.reduce((sum, item) => sum + parseFloat(item.totalPrice), 0).toFixed(2);
 
-      // Send bill email with embedded images
       const mailOptions = {
         from: process.env.EMAIL_USER,
         to: user.email,
@@ -807,7 +824,7 @@ app.get('/complete-khalti-payment', async (req, res) => {
             <p style="color: #777;">Best regards,<br>Sneaker.Np</p>
           </div>
         `,
-        attachments: attachments, // Attach the images to the email
+        attachments: attachments,
       };
 
       try {
@@ -818,10 +835,14 @@ app.get('/complete-khalti-payment', async (req, res) => {
       }
     }
 
-    res.redirect(`${process.env.FRONTEND_URL}/payment-success?transaction_id=${transaction_id}`);
+    const successRedirectUrl = `${process.env.FRONTEND_URL}/payment-success?transaction_id=${transaction_id}`;
+    console.log('Redirecting to success page:', successRedirectUrl);
+    return res.redirect(successRedirectUrl);
   } catch (error) {
     console.error('Error in complete-khalti-payment:', error);
-    res.redirect(`${process.env.FRONTEND_URL}/payment-failure?reason=server_error`);
+    const failureRedirectUrl = `${process.env.FRONTEND_URL}/payment-failure?reason=server_error`;
+    console.log('Redirecting to failure page:', failureRedirectUrl);
+    return res.redirect(failureRedirectUrl);
   }
 });
 
@@ -993,10 +1014,41 @@ app.post('/restockproduct', async (req, res) => {
 
 app.get('/admin/orders', async (req, res) => {
   try {
-    const orders = await PurchasedItem.find()
+    const { page = 1, filter = 'all' } = req.query;
+    const limit = 5; // Number of orders per page
+    const skip = (page - 1) * limit;
+
+    let dateFilter = {};
+    if (filter === 'today') {
+      dateFilter = { purchaseDate: { $gte: new Date().setHours(0, 0, 0, 0) } };
+    } else if (filter === 'week') {
+      dateFilter = { purchaseDate: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } };
+    } else if (filter === 'month') {
+      dateFilter = { purchaseDate: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } };
+    }
+
+    const orders = await PurchasedItem.find(dateFilter)
       .populate('user', 'name email')
-      .populate('product', 'name image');
-    res.json({ success: true, orders });
+      .populate('product', 'name image')
+      .skip(skip)
+      .limit(limit)
+      .sort({ purchaseDate: -1 })
+      .lean();
+
+    // Format productImage to include base URL if necessary
+    const formattedOrders = orders.map(order => ({
+      ...order,
+      productImage: order.productImage
+        ? order.productImage.startsWith('http')
+          ? order.productImage
+          : `${process.env.BASE_URL || 'http://localhost:5000'}${order.productImage}`
+        : null
+    }));
+
+    const totalOrders = await PurchasedItem.countDocuments(dateFilter);
+    const totalPages = Math.ceil(totalOrders / limit);
+
+    res.json({ success: true, orders: formattedOrders, totalPages });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -1007,6 +1059,7 @@ app.put('/admin/update-order-status', async (req, res) => {
     const { orderId, payment, delivery } = req.body;
     const validPayments = ['pending', 'completed', 'refunded'];
     const validDeliveries = ['pending', 'delivered'];
+    
     if (!validPayments.includes(payment)) {
       return res.status(400).json({ success: false, message: 'Invalid payment status' });
     }
@@ -1014,28 +1067,142 @@ app.put('/admin/update-order-status', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid delivery status' });
     }
 
-    const updatedOrder = await PurchasedItem.findByIdAndUpdate(
-      orderId,
-      { payment, delivery },
-      { new: true }
-    ).populate('user', 'name email')
-     .populate('product', 'name image');
-    
-    if (!updatedOrder) return res.status(404).json({ success: false, message: 'Order not found' });
-    
-    res.json({ success: true, order: updatedOrder });
+    const order = await PurchasedItem.findById(orderId)
+      .populate('user', 'name email')
+      .populate('product', 'name image');
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    // Update order status
+    order.payment = payment;
+    order.delivery = delivery;
+    await order.save();
+
+    // Send email notification if delivery status is changed to 'delivered'
+    if (delivery === 'delivered' && order.user && order.user.email) {
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: order.user.email,
+        subject: 'Your Order is on the Way!',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #333;">Order Update</h2>
+            <p>Dear ${order.user.name},</p>
+            <p>Great news! Your order has been processed and is on its way to your location.</p>
+            
+            <h3 style="color: #333;">Order Details</h3>
+            <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 10px 0;">
+              <p><strong>Product:</strong> ${order.product.name}</p>
+              <p><strong>Quantity:</strong> ${order.quantity}</p>
+              <p><strong>Size:</strong> ${order.size}</p>
+              <p><strong>Total Amount:</strong> Rs. ${order.totalPrice / 100}</p>
+            </div>
+
+            <p>Your order will be delivered to your registered address. Please ensure someone is available to receive the package.</p>
+            
+            <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
+            
+            <p style="color: #777;">Best regards,<br>Sneaker.Np Team</p>
+          </div>
+        `
+      };
+
+      try {
+        await transporter.sendMail(mailOptions);
+        console.log(`Delivery notification email sent to ${order.user.email}`);
+      } catch (emailError) {
+        console.error('Error sending delivery notification email:', emailError);
+      }
+    }
+
+    // Format the response
+    const formattedOrder = {
+      ...order.toObject(),
+      productImage: order.productImage
+        ? order.productImage.startsWith('http')
+          ? order.productImage
+          : `${process.env.BASE_URL || 'http://localhost:5000'}${order.productImage}`
+        : null
+    };
+
+    res.json({ success: true, order: formattedOrder });
   } catch (error) {
+    console.error('Error updating order status:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
+// Review-related endpoints
 app.get('/admin/reviews', async (req, res) => {
   try {
-    const reviews = await Review.find({ status: { $ne: 'Deleted' } })
+    const { page = 1, filter = 'all' } = req.query;
+    const limit = 5;
+    const skip = (page - 1) * limit;
+
+    let dateFilter = {};
+    const now = new Date();
+
+    if (filter === 'today') {
+      const startOfDay = new Date(now);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(now);
+      endOfDay.setHours(23, 59, 59, 999);
+      dateFilter = {
+        date: {
+          $gte: startOfDay,
+          $lte: endOfDay,
+        },
+      };
+    } else if (filter === 'week') {
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - 7);
+      dateFilter = {
+        date: { $gte: startOfWeek },
+      };
+    } else if (filter === 'month') {
+      const startOfMonth = new Date(now);
+      startOfMonth.setMonth(now.getMonth() - 1);
+      dateFilter = {
+        date: { $gte: startOfMonth },
+      };
+    }
+
+    const BASE_URL = process.env.BACKEND_URI || 'http://localhost:5000';
+    const reviews = await Review.find({
+      status: { $ne: 'Deleted' },
+      ...dateFilter,
+    })
       .populate('user', 'name email')
       .populate('product', 'name image')
-      .sort({ date: -1 });
-    res.json({ success: true, reviews });
+      .sort({ date: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const total = await Review.countDocuments({
+      status: { $ne: 'Deleted' },
+      ...dateFilter,
+    });
+
+    // Transform reviews to ensure full image URL
+    const formattedReviews = reviews.map(review => ({
+      ...review,
+      product: {
+        ...review.product,
+        image: review.product.image.startsWith('http')
+          ? review.product.image
+          : `${BASE_URL}${review.product.image}`,
+      },
+    }));
+
+    res.json({
+      success: true,
+      reviews: formattedReviews,
+      totalPages: Math.ceil(total / limit),
+      currentPage: parseInt(page),
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -1043,25 +1210,13 @@ app.get('/admin/reviews', async (req, res) => {
 
 app.delete('/admin/review/:id', async (req, res) => {
   try {
-    const review = await Review.findByIdAndUpdate(req.params.id, { status: 'Deleted' }, { new: true });
+    const review = await Review.findByIdAndUpdate(
+      req.params.id,
+      { status: 'Deleted' },
+      { new: true }
+    );
     if (!review) return res.status(404).json({ success: false, message: 'Review not found' });
     res.json({ success: true, message: 'Review marked as deleted' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-app.put('/admin/review/status/:id', async (req, res) => {
-  try {
-    const { status } = req.body;
-    if (!['Pending', 'Approved', 'Deleted'].includes(status)) {
-      return res.status(400).json({ success: false, message: 'Invalid status value' });
-    }
-    const review = await Review.findByIdAndUpdate(req.params.id, { status }, { new: true })
-      .populate('user', 'name email')
-      .populate('product', 'name image');
-    if (!review) return res.status(404).json({ success: false, message: 'Review not found' });
-    res.json({ success: true, review });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -1076,22 +1231,33 @@ app.get('/product/:productId/reviews', async (req, res) => {
     if (!product) {
       product = await Product.findOne({ id: Number(req.params.productId) });
     }
-    
+
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
-    const reviews = await Review.find({ 
-      product: product._id, 
-      status: 'Approved' 
+    const BASE_URL = process.env.BACKEND_URI || 'http://localhost:5000';
+    const reviews = await Review.find({
+      product: product._id,
+      status: 'Approved',
     })
       .populate('user', 'name')
-      .sort({ date: -1 });
-    
-    console.log(`Fetched ${reviews.length} approved reviews for product ${product._id}`);
-    res.json({ success: true, reviews });
+      .populate('product', 'name image')
+      .sort({ date: -1 })
+      .lean();
+
+    const formattedReviews = reviews.map(review => ({
+      ...review,
+      product: {
+        ...review.product,
+        image: review.product.image.startsWith('http')
+          ? review.product.image
+          : `${BASE_URL}${review.product.image}`,
+      },
+    }));
+
+    res.json({ success: true, reviews: formattedReviews });
   } catch (error) {
-    console.error('Error fetching reviews:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -1213,6 +1379,25 @@ const verifyAdmin = (req, res, next) => {
 // Example protected admin route
 app.get('/admin/protected', verifyAdmin, (req, res) => {
   res.json({ success: true, message: 'Welcome to the admin dashboard' });
+});
+
+// Add admin feedback endpoint
+app.put('/admin/review/:id/feedback', async (req, res) => {
+  try {
+    const { adminFeedback } = req.body;
+    const review = await Review.findByIdAndUpdate(
+      req.params.id,
+      { adminFeedback },
+      { new: true }
+    ).populate('user', 'name email')
+     .populate('product', 'name image');
+    
+    if (!review) return res.status(404).json({ success: false, message: 'Review not found' });
+    
+    res.json({ success: true, review });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 });
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

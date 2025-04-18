@@ -1409,4 +1409,85 @@ app.put('/admin/review/:id/feedback', async (req, res) => {
   }
 });
 
+app.get('/admin/transactions', async (req, res) => {
+  try {
+    const { page = 1, filter = 'all' } = req.query;
+    const limit = 5;
+    const skip = (page - 1) * limit;
+
+    let dateFilter = {};
+    const now = new Date();
+
+    if (filter === 'today') {
+      const startOfDay = new Date(now);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(now);
+      endOfDay.setHours(23, 59, 59, 999);
+      dateFilter = {
+        paymentDate: {
+          $gte: startOfDay,
+          $lte: endOfDay,
+        },
+      };
+    } else if (filter === 'week') {
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - 7);
+      dateFilter = {
+        paymentDate: { $gte: startOfWeek },
+      };
+    } else if (filter === 'month') {
+      const startOfMonth = new Date(now);
+      startOfMonth.setMonth(now.getMonth() - 1);
+      dateFilter = {
+        paymentDate: { $gte: startOfMonth },
+      };
+    }
+
+    const transactions = await Payment.find(dateFilter)
+      .populate('user', 'name email')
+      .populate({
+        path: 'purchasedItemId',
+        populate: {
+          path: 'product',
+          select: 'name image'
+        }
+      })
+      .sort({ paymentDate: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const BASE_URL = process.env.BACKEND_URI || 'http://localhost:5000';
+
+    // Format the transactions data
+    const formattedTransactions = transactions.map(transaction => ({
+      _id: transaction._id,
+      user: transaction.user,
+      product: transaction.purchasedItemId?.product || null,
+      productImage: transaction.productImage
+        ? transaction.productImage.startsWith('http')
+          ? transaction.productImage
+          : `${BASE_URL}${transaction.productImage}`
+        : null,
+      amount: transaction.amount,
+      paymentMethod: transaction.paymentGateway,
+      status: transaction.status,
+      createdAt: transaction.paymentDate,
+    }));
+
+    const totalTransactions = await Payment.countDocuments(dateFilter);
+    const totalPages = Math.ceil(totalTransactions / limit);
+
+    res.json({
+      success: true,
+      transactions: formattedTransactions,
+      totalPages,
+      currentPage: parseInt(page),
+    });
+  } catch (error) {
+    console.error('Error fetching transactions:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

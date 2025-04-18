@@ -9,27 +9,34 @@ const Orders = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [filter, setFilter] = useState('all');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const response = await fetch(`http://localhost:5000/admin/orders?page=${currentPage}&filter=${filter}`, {
-          headers: { 'auth-token': localStorage.getItem('admin-token') },
-        });
-        const data = await response.json();
-        if (data.success) {
-          setOrders(data.orders);
-          setTotalPages(data.totalPages);
-        }
-      } catch (error) {
-        console.error('Error fetching orders:', error);
-        toast.error('Failed to fetch orders');
-      }
-    };
     fetchOrders();
   }, [currentPage, filter]);
 
-  const handleStatusChange = async (orderId, newPayment, newDelivery) => {
+  const fetchOrders = async () => {
+    try {
+      const response = await fetch(`http://localhost:5000/admin/orders?page=${currentPage}&filter=${filter}`, {
+        headers: { 'auth-token': localStorage.getItem('admin-token') },
+      });
+      const data = await response.json();
+      if (data.success) {
+        setOrders(data.orders);
+        setTotalPages(data.totalPages);
+        toast.success('Orders loaded successfully');
+      } else {
+        toast.error('Failed to fetch orders');
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      toast.error('Error fetching orders');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStatusChange = async (orderId, field, value) => {
     try {
       const response = await fetch('http://localhost:5000/admin/update-order-status', {
         method: 'PUT',
@@ -37,23 +44,27 @@ const Orders = () => {
           'Content-Type': 'application/json',
           'auth-token': localStorage.getItem('admin-token'),
         },
-        body: JSON.stringify({ orderId, payment: newPayment, delivery: newDelivery }),
+        body: JSON.stringify({
+          orderId,
+          [field]: value
+        })
       });
       const data = await response.json();
       if (data.success) {
-        if (newDelivery === 'delivered') {
+        if (field === 'delivery' && value === 'delivered') {
           setOrders(orders.filter(order => order._id !== orderId));
+          toast.success('Order marked as delivered');
         } else {
-          setOrders(orders.map(order =>
-            order._id === orderId ? { ...order, payment: newPayment, delivery: newDelivery } : order
+          setOrders(orders.map(order => 
+            order._id === orderId ? { ...order, [field]: value } : order
           ));
+          toast.success('Order status updated successfully');
         }
-        toast.success('Order status updated successfully');
       } else {
         toast.error('Failed to update order status');
       }
     } catch (error) {
-      console.error('Error updating status:', error);
+      console.error('Error updating order status:', error);
       toast.error('Error updating order status');
     }
   };
@@ -75,41 +86,47 @@ const Orders = () => {
     });
   };
 
+  if (loading) {
+    return <div className="loading">Loading orders...</div>;
+  }
+
   return (
     <div className="orders-container">
-      <div className="header">
-        <h2>Order Management</h2>
-        <div className="filter-wrapper">
-          <div className="filter-button" onClick={() => setIsFilterOpen(!isFilterOpen)}>
-            <FiFilter />
-            Filter: {filter.charAt(0).toUpperCase() + filter.slice(1)}
-          </div>
+      <div className="orders-header">
+        <h2>Orders</h2>
+        <div className="filter-container">
+          <button 
+            className="filter-button"
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+          >
+            <FiFilter /> Filter
+          </button>
           {isFilterOpen && (
             <div className="filter-dropdown">
-              <button
+              <div 
                 className={`filter-option ${filter === 'all' ? 'active' : ''}`}
                 onClick={() => handleFilterChange('all')}
               >
                 All
-              </button>
-              <button
+              </div>
+              <div 
                 className={`filter-option ${filter === 'today' ? 'active' : ''}`}
                 onClick={() => handleFilterChange('today')}
               >
                 Today
-              </button>
-              <button
+              </div>
+              <div 
                 className={`filter-option ${filter === 'week' ? 'active' : ''}`}
                 onClick={() => handleFilterChange('week')}
               >
                 This Week
-              </button>
-              <button
+              </div>
+              <div 
                 className={`filter-option ${filter === 'month' ? 'active' : ''}`}
                 onClick={() => handleFilterChange('month')}
               >
                 This Month
-              </button>
+              </div>
             </div>
           )}
         </div>
@@ -158,9 +175,9 @@ const Orders = () => {
                   <td>{formatDate(order.purchaseDate)}</td>
                   <td>
                     <select
-                      value={order.payment}
-                      onChange={(e) => handleStatusChange(order._id, e.target.value, order.delivery)}
                       className="status-select"
+                      value={order.payment}
+                      onChange={(e) => handleStatusChange(order._id, 'payment', e.target.value)}
                     >
                       <option value="pending">Pending</option>
                       <option value="completed">Completed</option>
@@ -169,9 +186,9 @@ const Orders = () => {
                   </td>
                   <td>
                     <select
-                      value={order.delivery}
-                      onChange={(e) => handleStatusChange(order._id, order.payment, e.target.value)}
                       className="status-select"
+                      value={order.delivery}
+                      onChange={(e) => handleStatusChange(order._id, 'delivery', e.target.value)}
                     >
                       <option value="pending">Pending</option>
                       <option value="delivered">Delivered</option>
@@ -190,24 +207,24 @@ const Orders = () => {
 
       <div className="pagination">
         <button
-          className="pagination-button"
-          onClick={() => setCurrentPage(currentPage - 1)}
+          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
           disabled={currentPage === 1}
         >
           Previous
         </button>
-        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-          <button
-            key={page}
-            className={`pagination-button ${currentPage === page ? 'active' : ''}`}
-            onClick={() => setCurrentPage(page)}
-          >
-            {page}
-          </button>
-        ))}
+        <div className="page-numbers">
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+            <button
+              key={page}
+              onClick={() => setCurrentPage(page)}
+              className={currentPage === page ? 'active' : ''}
+            >
+              {page}
+            </button>
+          ))}
+        </div>
         <button
-          className="pagination-button"
-          onClick={() => setCurrentPage(currentPage + 1)}
+          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
           disabled={currentPage === totalPages}
         >
           Next

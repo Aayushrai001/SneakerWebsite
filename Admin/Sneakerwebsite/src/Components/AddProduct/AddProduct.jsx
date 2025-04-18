@@ -13,87 +13,87 @@ const AddProduct = () => {
     description: '',
   });
   const [sizes, setSizes] = useState([{ size: '', quantity: '' }]);
-  const [error, setError] = useState(''); // Added for error display
+  const [loading, setLoading] = useState(false);
 
   const handleImageChange = (e) => {
     if (e.target.files.length > 0) {
       const file = e.target.files[0];
       if (!['image/jpeg', 'image/png'].includes(file.type)) {
-        toast.errorr('Only .jpg and .png files are allowed');
+        toast.error('Only .jpg and .png files are allowed');
         return;
       }
       setImage(file);
-      setError('');
+      toast.success('Image selected successfully');
     }
   };
 
   const handleInputChange = (e) => {
     setProductDetails({ ...productDetails, [e.target.name]: e.target.value });
-    setError('');
   };
 
   const handleSizeChange = (index, field, value) => {
     const newSizes = [...sizes];
     newSizes[index][field] = value;
     setSizes(newSizes);
-    setError('');
   };
 
   const addSizeField = () => {
     setSizes([...sizes, { size: '', quantity: '' }]);
+    toast.success('New size field added');
   };
 
   const removeSizeField = (index) => {
     if (sizes.length > 1) {
       setSizes(sizes.filter((_, i) => i !== index));
+      toast.success('Size field removed');
+    } else {
+      toast.error('At least one size is required');
     }
   };
 
   const addProduct = async () => {
-    setError('');
-
-    // Validate required fields
-    if (
-      !productDetails.name.trim() ||
-      !productDetails.brand.trim() ||
-      !productDetails.new_price ||
-      !productDetails.description.trim() ||
-      !image
-    ) {
-      toast.error('Please fill all required fields and upload an image.');
-      return;
-    }
-
-    // Validate price
-    const price = parseFloat(productDetails.new_price);
-    if (isNaN(price) || price <= 0) {
-      toast.error('Price must be a positive number.');
-      return;
-    }
-
-    // Validate sizes
-    for (const size of sizes) {
-      if (!size.size.trim()) {
-        toast.error('Size cannot be empty.');
-        return;
-      }
-      const qty = parseInt(size.quantity);
-      if (isNaN(qty) || qty < 0) {
-        toast.error('Quantity must be a non-negative number.');
-        return;
-      }
-    }
-
-    const formData = new FormData();
-    formData.append('product', image);
-    formData.append('name', productDetails.name.trim());
-    formData.append('category', productDetails.category);
-    formData.append('brand', productDetails.brand.trim());
-    formData.append('new_price', price);
-    formData.append('description', productDetails.description.trim());
-    formData.append('sizes', JSON.stringify(sizes.map((s) => ({ size: s.size.trim(), quantity: parseInt(s.quantity) }))));
-
+    setLoading(true);
+    const loadingToast = toast.loading('Adding product...');
     try {
+      // Validate required fields
+      if (!productDetails.name.trim() || !productDetails.brand.trim() || !productDetails.new_price || !productDetails.description.trim() || !image) {
+        toast.error('Please fill all required fields and upload an image', { id: loadingToast });
+        setLoading(false);
+        return;
+      }
+
+      // Validate price
+      const price = parseFloat(productDetails.new_price);
+      if (isNaN(price) || price <= 0) {
+        toast.error('Price must be a positive number', { id: loadingToast });
+        setLoading(false);
+        return;
+      }
+
+      // Validate sizes
+      for (const size of sizes) {
+        if (!size.size.trim()) {
+          toast.error('Size cannot be empty', { id: loadingToast });
+          setLoading(false);
+          return;
+        }
+        const qty = parseInt(size.quantity);
+        if (isNaN(qty) || qty < 0) {
+          toast.error('Quantity must be a non-negative number', { id: loadingToast });
+          setLoading(false);
+          return;
+        }
+      }
+
+      const formData = new FormData();
+      formData.append('product', image);
+      formData.append('name', productDetails.name.trim());
+      formData.append('category', productDetails.category);
+      formData.append('brand', productDetails.brand.trim());
+      formData.append('new_price', price);
+      formData.append('description', productDetails.description.trim());
+      formData.append('sizes', JSON.stringify(sizes.map((s) => ({ size: s.size.trim(), quantity: parseInt(s.quantity) }))));
+
       const response = await fetch('http://localhost:5000/addproduct', {
         method: 'POST',
         body: formData,
@@ -101,7 +101,8 @@ const AddProduct = () => {
 
       const data = await response.json();
       if (data.success) {
-        toast.success('Product Added Successfully'); 
+        toast.success('Product added successfully', { id: loadingToast });
+        // Reset form
         setProductDetails({
           name: '',
           category: 'men',
@@ -112,17 +113,18 @@ const AddProduct = () => {
         setSizes([{ size: '', quantity: '' }]);
         setImage(null);
       } else {
-        toast.error(data.message || 'Failed to add product');
+        toast.error(data.message || 'Failed to add product', { id: loadingToast });
       }
     } catch (error) {
       console.error('Error adding product:', error);
-      toast.error('Error adding product: ' + error.message);
+      toast.error('Error adding product: ' + error.message, { id: loadingToast });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="add-product">
-      {error && <div className="error-message">{error}</div>}
       <div className="addproduct-itemfield">
         <p>Product Title</p>
         <input
@@ -231,8 +233,8 @@ const AddProduct = () => {
           hidden
         />
       </div>
-      <button onClick={addProduct} className="addproduct-btn">
-        ADD PRODUCT
+      <button onClick={addProduct} className="addproduct-btn" disabled={loading}>
+        {loading ? 'Adding Product...' : 'ADD PRODUCT'}
       </button>
     </div>
   );

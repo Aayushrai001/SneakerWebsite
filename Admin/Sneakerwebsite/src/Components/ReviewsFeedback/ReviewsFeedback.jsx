@@ -13,14 +13,17 @@ const ReviewsFeedback = () => {
   const [showFeedbackForm, setShowFeedbackForm] = useState(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false); // Added for dropdown toggle
+  const [loading, setLoading] = useState(true);
 
   // Fetch reviews from backend
   useEffect(() => {
     const fetchReviews = async () => {
+      const loadingToast = toast.loading('Loading reviews...');
       try {
+        setLoading(true);
         const token = localStorage.getItem('auth-token');
         if (!token) {
-          console.error('No auth token found');
+          toast.error('Authentication required', { id: loadingToast });
           setReviews([]); // Clear reviews if not authenticated
           return;
         }
@@ -35,13 +38,18 @@ const ReviewsFeedback = () => {
           setReviews(data.reviews);
           setTotalPages(data.totalPages);
           console.log('Reviews fetched:', data.reviews);
+          toast.success('Reviews loaded successfully', { id: loadingToast });
         } else {
           console.error('Failed to fetch reviews:', data.message);
           setReviews([]);
+          toast.error(data.message || 'Failed to fetch reviews', { id: loadingToast });
         }
       } catch (error) {
         console.error('Error fetching reviews:', error);
         setReviews([]);
+        toast.error('Error fetching reviews', { id: loadingToast });
+      } finally {
+        setLoading(false);
       }
     };
     fetchReviews();
@@ -49,10 +57,12 @@ const ReviewsFeedback = () => {
 
   // Handle filter change
   const handleFilterChange = (newFilter) => {
+    const loadingToast = toast.loading('Applying filter...');
     console.log('Filter changed to:', newFilter);
     setFilter(newFilter);
     setCurrentPage(1);
     setIsFilterOpen(false);
+    toast.success(`Filter changed to ${newFilter}`, { id: loadingToast });
   };
 
   // Toggle filter dropdown
@@ -71,8 +81,10 @@ const ReviewsFeedback = () => {
   const handleDelete = async (reviewId) => {
     if (deleteConfirmation !== reviewId) {
       setDeleteConfirmation(reviewId);
+      toast('Click again to confirm deletion', { icon: '⚠️' });
       return;
     }
+    const loadingToast = toast.loading('Deleting review...');
     try {
       const token = localStorage.getItem('auth-token');
       const response = await fetch(`http://localhost:5000/admin/review/${reviewId}`, {
@@ -85,13 +97,13 @@ const ReviewsFeedback = () => {
       if (data.success) {
         setReviews(reviews.filter(review => review._id !== reviewId));
         setDeleteConfirmation(null);
-        toast.success('Review deleted successfully');
+        toast.success('Review deleted successfully', { id: loadingToast });
       } else {
-        toast.error(data.message || 'Failed to delete review');
+        toast.error(data.message || 'Failed to delete review', { id: loadingToast });
       }
     } catch (error) {
       console.error('Error deleting review:', error);
-      toast.error('Error deleting review');
+      toast.error('Error deleting review', { id: loadingToast });
     }
   };
 
@@ -112,6 +124,7 @@ const ReviewsFeedback = () => {
       toast.error('Feedback cannot be empty');
       return;
     }
+    const loadingToast = toast.loading('Submitting feedback...');
     try {
       const token = localStorage.getItem('auth-token');
       const response = await fetch(`http://localhost:5000/admin/review/${reviewId}/feedback`, {
@@ -129,13 +142,13 @@ const ReviewsFeedback = () => {
         ));
         setShowFeedbackForm(null);
         setFeedbackInput(prev => ({ ...prev, [reviewId]: '' }));
-        toast.success('Feedback submitted successfully');
+        toast.success('Feedback submitted successfully', { id: loadingToast });
       } else {
-        toast.error(data.message || 'Failed to submit feedback');
+        toast.error(data.message || 'Failed to submit feedback', { id: loadingToast });
       }
     } catch (error) {
       console.error('Error submitting feedback:', error);
-      toast.error('Error submitting feedback');
+      toast.error('Error submitting feedback', { id: loadingToast });
     }
   };
 
@@ -143,11 +156,15 @@ const ReviewsFeedback = () => {
   const handleFeedbackCancel = (reviewId) => {
     setShowFeedbackForm(null);
     setFeedbackInput(prev => ({ ...prev, [reviewId]: '' }));
+    toast.success('Feedback form cancelled');
   };
 
   // Toggle feedback form
   const toggleFeedbackForm = (reviewId) => {
     setShowFeedbackForm(showFeedbackForm === reviewId ? null : reviewId);
+    if (showFeedbackForm !== reviewId) {
+      toast.success('Feedback form opened');
+    }
   };
 
   // Render pagination buttons

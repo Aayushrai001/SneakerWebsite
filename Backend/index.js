@@ -1103,10 +1103,10 @@ app.put('/admin/update-order-status', async (req, res) => {
             
             <h3 style="color: #333;">Order Details</h3>
             <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 10px 0;">
-              <p><strong>Product:</strong> ${order.product.name}</p>
-              <p><strong>Quantity:</strong> ${order.quantity}</p>
-              <p><strong>Size:</strong> ${order.size}</p>
-              <p><strong>Total Amount:</strong> Rs. ${order.totalPrice / 100}</p>
+              <p><strong>Product:</strong> {order.product.name}</p>
+              <p><strong>Quantity:</strong> {order.quantity}</p>
+              <p><strong>Size:</strong> {order.size}</p>
+              <p><strong>Total Amount:</strong> Rs. {order.totalPrice / 100}</p>
             </div>
 
             <p>Your order will be delivered to your registered address. Please ensure someone is available to receive the package.</p>
@@ -1486,6 +1486,136 @@ app.get('/admin/transactions', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching transactions:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get overview statistics
+app.get('/admin/overview', async (req, res) => {
+  try {
+    // Get total products
+    const totalProducts = await Product.countDocuments();
+
+    // Get total earnings (sum of all completed payments)
+    const totalEarnings = await Payment.aggregate([
+      { $match: { status: 'success' } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+
+    // Get total orders
+    const totalOrders = await PurchasedItem.countDocuments();
+
+    // Get new users (users created in the last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const newUsers = await Users.countDocuments({
+      date: { $gte: thirtyDaysAgo }
+    });
+
+    // Get pending orders count
+    const pendingOrders = await PurchasedItem.countDocuments({ delivery: 'pending' });
+
+    // Get monthly sales data
+    const monthlySales = await Payment.aggregate([
+      { $match: { status: 'success' } },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$paymentDate' },
+            month: { $month: '$paymentDate' }
+          },
+          total: { $sum: '$amount' }
+        }
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1 } },
+      { $limit: 5 }
+    ]);
+
+    // Get yearly sales trend
+    const yearlySales = await Payment.aggregate([
+      { $match: { status: 'success' } },
+      {
+        $group: {
+          _id: { $year: '$paymentDate' },
+          total: { $sum: '$amount' }
+        }
+      },
+      { $sort: { '_id': 1 } }
+    ]);
+
+    // Get top selling products with proper population
+    const topProducts = await PurchasedItem.aggregate([
+      {
+        $group: {
+          _id: '$product',
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { count: -1 } },
+      { $limit: 5 }
+    ]);
+
+    // Get product details for top products
+    const productIds = topProducts.map(p => p._id);
+    const products = await Product.find({ _id: { $in: productIds } }).select('name');
+    
+    // Create a map of product IDs to names
+    const productMap = products.reduce((acc, product) => {
+      acc[product._id.toString()] = product.name;
+      return acc;
+    }, {});
+
+    // Format top products with names
+    const formattedTopProducts = topProducts.map(product => ({
+      name: productMap[product._id.toString()] || 'Unknown Product',
+      value: product.count
+    }));
+
+    // Get recent transactions
+    const recentTransactions = await Payment.find({ status: 'success' })
+      .populate('user', 'name email')
+      .populate({
+        path: 'purchasedItemId',
+        populate: {
+          path: 'product',
+          select: 'name'
+        }
+      })
+      .sort({ paymentDate: -1 })
+      .limit(5)
+      .lean();
+
+    // Format recent transactions
+    const formattedRecentTransactions = recentTransactions.map(transaction => ({
+      id: transaction._id,
+      user: transaction.user?.name || 'Unknown User',
+      product: transaction.purchasedItemId?.product?.name || 'Unknown Product',
+      amount: transaction.amount / 100,
+      date: transaction.paymentDate
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        totalProducts,
+        totalEarnings: totalEarnings[0]?.total || 0,
+        totalOrders,
+        newUsers,
+        pendingOrders,
+        monthlySales: monthlySales.map(sale => ({
+          name: new Date(sale._id.year, sale._id.month - 1).toLocaleString('default', { month: 'short' }),
+          sales: sale.total / 100
+        })),
+        yearlySales: yearlySales.map(sale => ({
+          year: sale._id.toString(),
+          total: sale.total / 100
+        })),
+        topProducts: formattedTopProducts,
+        recentTransactions: formattedRecentTransactions
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching overview data:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });

@@ -13,6 +13,7 @@ const Transaction = () => {
 
   useEffect(() => {
     const fetchTransactions = async () => {
+      const loadingToast = toast.loading('Loading transactions...');
       try {
         setLoading(true);
         const response = await fetch(`http://localhost:5000/admin/transactions?page=${currentPage}&filter=${filter}`, {
@@ -22,10 +23,13 @@ const Transaction = () => {
         if (data.success) {
           setTransactions(data.transactions);
           setTotalPages(data.totalPages);
+          toast.success('Transactions loaded successfully', { id: loadingToast });
+        } else {
+          toast.error(data.message || 'Failed to fetch transactions', { id: loadingToast });
         }
       } catch (error) {
         console.error('Error fetching transactions:', error);
-        toast.error('Failed to fetch transactions');
+        toast.error('Failed to fetch transactions', { id: loadingToast });
       } finally {
         setLoading(false);
       }
@@ -34,9 +38,11 @@ const Transaction = () => {
   }, [currentPage, filter]);
 
   const handleFilterChange = (newFilter) => {
+    const loadingToast = toast.loading('Applying filter...');
     setFilter(newFilter);
     setCurrentPage(1);
     setIsFilterOpen(false);
+    toast.success(`Filter changed to ${newFilter}`, { id: loadingToast });
   };
 
   const formatDate = (dateString) => {

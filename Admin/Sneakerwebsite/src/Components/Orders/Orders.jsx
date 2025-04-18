@@ -41,9 +41,13 @@ const Orders = () => {
       });
       const data = await response.json();
       if (data.success) {
-        setOrders(orders.map(order =>
-          order._id === orderId ? { ...order, payment: newPayment, delivery: newDelivery } : order
-        ));
+        if (newDelivery === 'delivered') {
+          setOrders(orders.filter(order => order._id !== orderId));
+        } else {
+          setOrders(orders.map(order =>
+            order._id === orderId ? { ...order, payment: newPayment, delivery: newDelivery } : order
+          ));
+        }
         toast.success('Order status updated successfully');
       } else {
         toast.error('Failed to update order status');
@@ -112,70 +116,76 @@ const Orders = () => {
       </div>
 
       <div className="table-container">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Order ID</th>
-              <th>Customer</th>
-              <th>Product</th>
-              <th>Image</th>
-              <th>Quantity</th>
-              <th>Total Price</th>
-              <th>Date</th>
-              <th>Payment</th>
-              <th>Delivery</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map((order) => (
-              <tr key={order._id}>
-                <td>{order._id.slice(-6)}</td>
-                <td>
-                  {order.user ? (
-                    <>
-                      {order.user.name} <br />
-                      <small>{order.user.email}</small>
-                    </>
-                  ) : (
-                    <span className="text-muted">User not found</span>
-                  )}
-                </td>
-                <td>{order.product?.name || 'Product not found'}</td>
-                <td>
-                  {order.productImage ? (
-                    <img src={order.productImage} alt={order.product?.name || 'Product'} className="product-image" />
-                  ) : (
-                    <span className="text-muted">No image</span>
-                  )}
-                </td>
-                <td>{order.quantity}</td>
-                <td>Rs. {order.totalPrice / 100}</td>
-                <td>{formatDate(order.purchaseDate)}</td>
-                <td>
-                  <select
-                    value={order.payment}
-                    onChange={(e) => handleStatusChange(order._id, e.target.value, order.delivery)}
-                    className="status-select"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="completed">Completed</option>
-                    <option value="refunded">Refunded</option>
-                  </select>
-                </td>
-                <td>
-                  <select
-                    value={order.delivery}
-                    onChange={(e) => handleStatusChange(order._id, order.payment, e.target.value)}
-                    className="status-select"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="delivered">Delivered</option>
-                  </select>
-                </td>
+        {orders.length > 0 ? (
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Product</th>
+                <th>Image</th>
+                <th>Quantity</th>
+                <th>Total Price</th>
+                <th>Date</th>
+                <th>Payment</th>
+                <th>Delivery</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {orders.map((order) => (
+                <tr key={order._id}>
+                  <td>{order._id.slice(-6)}</td>
+                  <td>
+                    {order.user ? (
+                      <>
+                        {order.user.name} <br />
+                        <small>{order.user.email}</small>
+                      </>
+                    ) : (
+                      <span className="text-muted">User not found</span>
+                    )}
+                  </td>
+                  <td>{order.product?.name || 'Product not found'}</td>
+                  <td>
+                    {order.productImage ? (
+                      <img src={order.productImage} alt={order.product?.name || 'Product'} className="product-image" />
+                    ) : (
+                      <span className="text-muted">No image</span>
+                    )}
+                  </td>
+                  <td>{order.quantity}</td>
+                  <td>Rs. {order.totalPrice / 100}</td>
+                  <td>{formatDate(order.purchaseDate)}</td>
+                  <td>
+                    <select
+                      value={order.payment}
+                      onChange={(e) => handleStatusChange(order._id, e.target.value, order.delivery)}
+                      className="status-select"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="completed">Completed</option>
+                      <option value="refunded">Refunded</option>
+                    </select>
+                  </td>
+                  <td>
+                    <select
+                      value={order.delivery}
+                      onChange={(e) => handleStatusChange(order._id, order.payment, e.target.value)}
+                      className="status-select"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="delivered">Delivered</option>
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <div className="no-orders-message">
+            <p>No pending orders found</p>
+          </div>
+        )}
       </div>
 
       <div className="pagination">

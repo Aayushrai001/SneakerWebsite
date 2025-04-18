@@ -1018,13 +1018,22 @@ app.get('/admin/orders', async (req, res) => {
     const limit = 5; // Number of orders per page
     const skip = (page - 1) * limit;
 
-    let dateFilter = {};
+    let dateFilter = { delivery: 'pending' }; // Only fetch pending delivery orders
     if (filter === 'today') {
-      dateFilter = { purchaseDate: { $gte: new Date().setHours(0, 0, 0, 0) } };
+      dateFilter = { 
+        ...dateFilter,
+        purchaseDate: { $gte: new Date().setHours(0, 0, 0, 0) } 
+      };
     } else if (filter === 'week') {
-      dateFilter = { purchaseDate: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } };
+      dateFilter = { 
+        ...dateFilter,
+        purchaseDate: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } 
+      };
     } else if (filter === 'month') {
-      dateFilter = { purchaseDate: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } };
+      dateFilter = { 
+        ...dateFilter,
+        purchaseDate: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } 
+      };
     }
 
     const orders = await PurchasedItem.find(dateFilter)

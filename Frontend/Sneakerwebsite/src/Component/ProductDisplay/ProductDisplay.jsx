@@ -5,6 +5,8 @@ import star_dull_icon from '../assets/star_dull_icon.png';
 import khalti from '../assets/khalti.png';
 import { ShopContext } from '../../Context/ShopContext';
 import axios from 'axios';
+import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
 const ProductDisplay = ({ product }) => {
   const { addtoCart, addtoFavourite, cartItems, favouriteItems } = useContext(ShopContext);
@@ -12,11 +14,14 @@ const ProductDisplay = ({ product }) => {
   const [selectedSize, setSelectedSize] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [reviews, setReviews] = useState([]);
-  const [visibleReviews, setVisibleReviews] = useState(3);
-  const [showMore, setShowMore] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [reviewsPerPage] = useState(5);
   const [availableSizes, setAvailableSizes] = useState([]);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   const isLoggedIn = !!localStorage.getItem('auth-token');
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (product) {
@@ -35,22 +40,56 @@ const ProductDisplay = ({ product }) => {
     }
   }, [product]);
 
+  useEffect(() => {
+    if (reviews.length > 0) {
+      console.log('Current reviews:', reviews.map(r => ({
+        id: r._id,
+        rating: r.rating,
+        feedback: r.feedback
+      })));
+    }
+  }, [reviews]);
+
   const fetchReviews = async () => {
     try {
       const productId = product?._id;
       if (!productId) return;
+
+      console.log('Fetching reviews for product:', productId);
       const response = await fetch(`http://localhost:5000/product/${productId}/reviews`);
-      if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+      
+      if (!response.ok) {
+        console.error('Error response:', response.status, response.statusText);
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
       const data = await response.json();
+      console.log('Received reviews data:', data.reviews);
+      
       if (data.success) {
         setReviews(data.reviews || []);
       } else {
+        console.error('API returned success: false:', data.message);
         setReviews([]);
       }
     } catch (error) {
+      console.error('Error fetching reviews:', error);
       setReviews([]);
     }
   };
+
+  const calculateOverallRating = () => {
+    if (!reviews || reviews.length === 0) return 0;
+    const validReviews = reviews.filter(review => typeof review.rating === 'number');
+    if (validReviews.length === 0) return 0;
+    const totalRating = validReviews.reduce((sum, review) => sum + (review.rating || 0), 0);
+    return (totalRating / validReviews.length).toFixed(1);
+  };
+
+  const indexOfLastReview = currentPage * reviewsPerPage;
+  const indexOfFirstReview = indexOfLastReview - reviewsPerPage;
+  const currentReviews = reviews.slice(indexOfFirstReview, indexOfLastReview);
+  const totalPages = Math.ceil(reviews.length / reviewsPerPage);
 
   const handleSizeChange = (event) => {
     setSelectedSize(event.target.value);
@@ -89,67 +128,93 @@ const ProductDisplay = ({ product }) => {
     setQuantity(prev => Math.max(1, prev - 1));
   };
 
-  const handleKhaltiPayment = async () => {
-    if (!isLoggedIn) {
-      alert('Please log in to proceed with payment');
-      return;
-    }
-    if (!selectedSize) {
-      alert('Please select a size');
-      return;
-    }
-    if (quantity < 1) {
-      alert('Quantity must be at least 1');
-      return;
-    }
-    const productId = product?._id;
-    if (!productId) {
-      alert('Invalid product ID');
-      return;
-    }
-
-    const orderDetails = [{
-      productId,
-      productName: product.name,
-      quantity,
-      size: selectedSize,
-      totalPrice: product.new_price * quantity,
-      productImage: product.image,
-    }];
-
+  const handlePayment = async (paymentMethod) => {
     try {
-      const response = await axios.post(
-        'http://localhost:5000/initialize-khalti',
-        {
-          cartItems: [{
-            productId,
-            quantity,
-            totalPrice: product.new_price * quantity,
-            size: selectedSize,
-          }],
-          totalPrice: product.new_price * quantity,
-          orderDetails, // Include orderDetails in payload
-        },
-        { headers: { 'auth-token': localStorage.getItem('auth-token') } }
-      );
+      if (!selectedSize) {
+        toast.error('Please select a size first');
+        return;
+      }
 
-      if (response.data.success) {
-        window.location.href = response.data.payment.payment_url;
+      if (!localStorage.getItem('auth-token')) {
+        toast.error('Please login to continue');
+        return;
+      }
+
+      const token = localStorage.getItem('auth-token');
+      const cartItems = [
+        {
+          productId: product._id,
+          size: selectedSize,
+          quantity: quantity
+        }
+      ];
+      const totalPrice = product.new_price * quantity;
+
+      const response = await fetch('http://localhost:5000/initialize-khalti', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'auth-token': token
+        },
+        body: JSON.stringify({
+          cartItems,
+          totalPrice,
+          paymentMethod
+        })
+      });
+
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          const text = await response.text();
+          console.error('Non-JSON response:', text);
+          throw new Error('Server returned a non-JSON response');
+        }
+        const data = await response.json();
+        throw new Error(data.error || `HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (paymentMethod === 'COD') {
+        toast.success('Order placed successfully with Cash on Delivery');
+        setShowCheckout(false);
+        if (data.redirect_url) {
+          navigate(data.redirect_url.replace('http://localhost:5173', ''));
+        } else if (data.transaction_id) {
+          navigate(`/payment-success?transaction_id=${data.transaction_id}`);
+        } else {
+          toast.error('Missing redirect URL for COD success page');
+        }
+        // Clear the cart
+        await fetch('http://localhost:5000/clearcart', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'auth-token': localStorage.getItem('auth-token'),
+          },
+        });
+        return;
+      }
+
+      if (paymentMethod === 'khalti' && data.payment?.payment_url) {
+        window.location.href = data.payment.payment_url;
       } else {
-        alert(`Failed to initialize payment: ${response.data.message || 'Unknown error'}`);
+        throw new Error('Invalid payment response');
       }
     } catch (error) {
-      alert(`Payment Error: ${error.response?.data?.message || error.message}`);
+      console.error('Payment error:', error);
+      toast.error(error.message || 'Failed to process payment');
     }
   };
 
   const handleAddToCart = () => {
     if (!isLoggedIn) {
-      alert('Please log in to add items to your cart');
+      toast.error('Please log in to add items to your cart');
       return;
     }
     if (!selectedSize) {
-      alert('Please select a size');
+      toast.error('Please select a size');
       return;
     }
     const sizeData = product?.sizes.find(s => s.size === selectedSize);
@@ -166,21 +231,16 @@ const ProductDisplay = ({ product }) => {
 
   const handleAddToFavourite = () => {
     if (!isLoggedIn) {
-      alert('Please log in to add items to your favorites');
+      toast.error('Please log in to add items to your favorites');
       return;
     }
     if (!selectedSize) {
-      alert('Please select a size');
+      toast.error('Please select a size');
       return;
     }
     addtoFavourite(product.id, selectedSize);
     setQuantity(1);
     setSelectedSize('');
-  };
-
-  const toggleReviews = () => {
-    setShowMore(prev => !prev);
-    setVisibleReviews(showMore ? reviews.length : 3);
   };
 
   const averageRating = reviews.length > 0
@@ -212,17 +272,22 @@ const ProductDisplay = ({ product }) => {
 
         <div className="productdisplay-right">
           <h1>{product.name}</h1>
-          <div className="overall-rating">
-            <div className="productdisplay-right-star">
-              {[...Array(5)].map((_, i) => (
+          <div className="overall-rating-container">
+            <div className="rating-number">
+              <span className="big-rating">{calculateOverallRating()}</span>
+              <span className="max-rating">/5</span>
+            </div>
+            <div className="rating-stars">
+              {[1, 2, 3, 4, 5].map((star) => (
                 <img
-                  key={i}
-                  src={i < averageRating ? star_icon : star_dull_icon}
+                  key={star}
+                  src={star <= calculateOverallRating() ? star_icon : star_dull_icon}
                   alt="star"
+                  className="star-icon"
                 />
               ))}
+              <span className="review-count">({reviews.length} reviews)</span>
             </div>
-            <p>{averageRating} ({reviews.length} reviews)</p>
           </div>
           <div className="productdisplay-right-prices">
             <div className="productdisplay-right-price-new">Rs.{product.new_price}</div>
@@ -272,36 +337,114 @@ const ProductDisplay = ({ product }) => {
           <button className="checkout" onClick={() => setShowCheckout(true)}>CHECKOUT</button>
 
           {showCheckout && (
-            <div className="checkout-container">
-              <h2>Checkout</h2>
-              <div className="checkout-info">
-                <h3>Product:</h3>
-                <p>{product.name}</p>
+            <>
+              <div className="modal-overlay" onClick={() => setShowCheckout(false)} />
+              <div className="checkout-container">
+                <i className="fas fa-times checkout-close" onClick={() => setShowCheckout(false)} />
+                <h2>Checkout</h2>
+                
+                {!selectedSize && (
+                  <div className="checkout-warning">
+                    Please select a size before proceeding with payment
+                  </div>
+                )}
+                
+                <div className="checkout-info">
+                  <h3>Product:</h3>
+                  <p>{product.name}</p>
+                </div>
+                <div className="checkout-info">
+                  <h3>Size:</h3>
+                  <p>{selectedSize || 'Not selected'}</p>
+                </div>
+                <div className="checkout-info">
+                  <h3>Quantity:</h3>
+                  <p>{quantity}</p>
+                </div>
+                <div className="checkout-info total">
+                  <h3>Total Amount:</h3>
+                  <p>Rs. {product.new_price * quantity}</p>
+                </div>
+                
+                <div className="payment-options">
+                  <h3>Select Payment Method</h3>
+                  <div className="payment-buttons">
+                    <button
+                      className={`payment-button ${selectedPaymentMethod === 'khalti' ? 'selected' : ''}`}
+                      onClick={() => {
+                        setSelectedPaymentMethod('khalti');
+                        if (isLoggedIn && selectedSize) {
+                          handlePayment('khalti');
+                        } else if (!isLoggedIn) {
+                          navigate('/login');
+                        } else {
+                          toast.error('Please select a size');
+                        }
+                      }}
+                    >
+                      <img src={khalti} alt="Khalti" />
+                      Pay with Khalti
+                    </button>
+                    <button
+                      className={`payment-button ${selectedPaymentMethod === 'COD' ? 'selected' : ''}`}
+                      onClick={() => {
+                        setSelectedPaymentMethod('COD');
+                        if (isLoggedIn && selectedSize) {
+                          setShowConfirmation(true);
+                        } else if (!isLoggedIn) {
+                          navigate('/login');
+                        } else {
+                          toast.error('Please select a size');
+                        }
+                      }}
+                    >
+                      <i className="fas fa-money-bill-wave"></i>
+                      Cash on Delivery
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="checkout-actions">
+                  {!isLoggedIn ? (
+                    <div className="login-warning">
+                      <p>Please log in to proceed with payment</p>
+                      <button onClick={() => navigate('/login')}>Log In</button>
+                    </div>
+                  ) : !selectedSize ? (
+                    <div className="size-warning">
+                      <p>Please select a size before proceeding with payment</p>
+                    </div>
+                  ) : null}
+                </div>
               </div>
-              <div className="checkout-info">
-                <h3>Price:</h3>
-                <p>Rs. {product.new_price}</p>
+            </>
+          )}
+
+          {showConfirmation && (
+            <>
+              <div className="modal-overlay" onClick={() => setShowConfirmation(false)} />
+              <div className="confirmation-modal">
+                <h3>Confirm Your Order</h3>
+                <p>Are you sure you want to place this order with Cash on Delivery?</p>
+                <div className="order-summary">
+                  <p><strong>Product:</strong> {product.name}</p>
+                  <p><strong>Size:</strong> {selectedSize}</p>
+                  <p><strong>Quantity:</strong> {quantity}</p>
+                  <p><strong>Total Amount:</strong> Rs. {product.new_price * quantity}</p>
+                </div>
+                <div className="confirmation-actions">
+                  <button className="confirm-btn" onClick={() => handlePayment('COD')}>
+                    Confirm Order
+                  </button>
+                  <button 
+                    className="cancel-confirm-btn" 
+                    onClick={() => setShowConfirmation(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
-              <div className="checkout-info">
-                <h3>Size:</h3>
-                <p>{selectedSize || 'Not selected'}</p>
-              </div>
-              <div className="checkout-info">
-                <h3>Quantity:</h3>
-                <p>{quantity}</p>
-              </div>
-              <div className="checkout-info">
-                <h3>Total Amount:</h3>
-                <h3>Rs. {product.new_price * quantity}</h3>
-              </div>
-              <div className="checkout-method">
-                <h2>Payment Method:</h2>
-              </div>
-              <button className="khalti-btn" onClick={handleKhaltiPayment}>
-                Pay with Khalti <img src={khalti} alt="Khalti" className="khalti" />
-              </button>
-              <button onClick={() => setShowCheckout(false)}>Cancel</button>
-            </div>
+            </>
           )}
         </div>
       </div>
@@ -309,38 +452,74 @@ const ProductDisplay = ({ product }) => {
       <div className="reviews-section">
         <h2>Customer Reviews ({reviews.length})</h2>
         {reviews.length === 0 ? (
-          <p className="no-reviews">No approved reviews yet.</p>
+          <p className="no-reviews">No reviews yet.</p>
         ) : (
-          <div className="reviews-list">
-            {reviews.slice(0, visibleReviews).map(review => (
-              <div key={review._id} className="review-item">
-                <div className="review-header">
-                  <span className="review-username">
-                    {review.user?.name || 'Anonymous'}
-                  </span>
-                  <span className="review-rating">
-                    {[...Array(5)].map((_, i) => (
-                      <img
-                        key={i}
-                        src={i < review.rating ? star_icon : star_dull_icon}
-                        alt="star"
-                      />
-                    ))}
-                  </span>
+          <>
+            <div className="reviews-list">
+              {currentReviews.map(review => (
+                <div key={review._id} className="review-item">
+                  <div className="review-header">
+                    <div className="review-user-info">
+                      <span className="review-username">
+                        {review.user?.name || 'Anonymous'}
+                      </span>
+                      <div className="review-rating">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <img
+                            key={star}
+                            src={star <= (review.rating || 0) ? star_icon : star_dull_icon}
+                            alt={`${star} star`}
+                            className="star-icon"
+                          />
+                        ))}
+                        <span className="rating-value">({review.rating || 0}/5)</span>
+                      </div>
+                    </div>
+                    <span className="review-date">
+                      {new Date(review.date).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="review-content">
+                    <p className="review-feedback">{review.feedback}</p>
+                    {review.adminFeedback && (
+                      <div className="admin-feedback">
+                        <div className="admin-feedback-header">
+                          <span className="admin-label">
+                            <i className="fas fa-shield-alt"></i> Sneaker.Np Response
+                          </span>
+                          <span className="admin-response-date">
+                            {review.adminFeedbackDate ? 
+                              new Date(review.adminFeedbackDate).toLocaleDateString() : 
+                              new Date().toLocaleDateString()}
+                          </span>
+                        </div>
+                        <p className="admin-feedback-text">{review.adminFeedback}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <p className="review-feedback">
-                  {review.feedback || 'No feedback provided'}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-        {reviews.length > 3 && (
-          <div className="reviews-more">
-            <button className="reviews-toggle-btn" onClick={toggleReviews}>
-              {showMore ? 'See More Reviews' : 'Show Less Reviews'}
-            </button>
-          </div>
+              ))}
+            </div>
+            <div className="pagination">
+              <button 
+                className="pagination-button"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => prev - 1)}
+              >
+                Previous
+              </button>
+              <span className="page-info">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button 
+                className="pagination-button"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => prev + 1)}
+              >
+                Next
+              </button>
+            </div>
+          </>
         )}
       </div>
     </div>

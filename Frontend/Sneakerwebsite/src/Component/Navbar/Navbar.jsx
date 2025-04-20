@@ -1,5 +1,5 @@
-import React, { useContext, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useContext, useRef, useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { ShopContext } from '../../Context/ShopContext';
 import './Navbar.css';
 import logo from '../assets/logo.png';
@@ -13,8 +13,23 @@ const Navbar = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const menuRef = useRef();
   const { getTotalCartItems, getTotalFavouriteItems, userName } = useContext(ShopContext);
+  const location = useLocation();
 
   const isAuthenticated = localStorage.getItem('auth-token');
+
+  // Update activeMenu based on current route
+  useEffect(() => {
+    const pathToMenuName = {
+      '/': 'Shop',
+      '/mens': 'Mens',
+      '/womens': 'Womens',
+      '/kids': 'Kids',
+      '/personalize': 'Personalize',
+      '/aboutus': 'About Us',
+    };
+    const currentMenu = pathToMenuName[location.pathname] || 'Home';
+    setActiveMenu(currentMenu);
+  }, [location.pathname]);
 
   const toggleNavMenu = (e) => {
     menuRef.current.classList.toggle('nav-menu-visible');

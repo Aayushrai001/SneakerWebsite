@@ -8,9 +8,9 @@ const purchasedItemSchema = new mongoose.Schema({
   size: { type: String, required: true },
   productImage: { type: String, required: true },
   purchaseDate: { type: Date, default: Date.now },
-  paymentMethod: { type: String, enum: ['khalti'], required: true },
-  payment: { type: String, enum: ['pending', 'completed', 'refunded'], default: 'pending' },
-  delivery: { type: String, enum: ['pending', 'delivered'], default: 'pending' }, // New delivery field
+  paymentMethod: { type: String, enum: ['khalti', 'COD'], required: true },
+  payment: { type: String, enum: ['COD', 'completed', 'refunded'], default: 'COD' },
+  delivery: { type: String, enum: ['pending', 'delivered'], default: 'pending' },
 }, { timestamps: true });
 
 module.exports = mongoose.model('PurchasedItem', purchasedItemSchema);

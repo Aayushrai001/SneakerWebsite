@@ -288,3 +288,76 @@
         font-size: 14px;
     }
 }
+
+.payment-options {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.payment-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.payment-option:hover {
+    background-color: #f9f9f9;
+}
+
+.payment-option input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.payment-option label {
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.khalti-btn, .cod-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.khalti-btn {
+    background-color: #5C2D91;
+    color: white;
+}
+
+.cod-btn {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.khalti-btn:hover, .cod-btn:hover {
+    opacity: 0.9;
+}
+
+.khalti-btn:disabled, .cod-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.khalti {
+    width: 24px;
+    height: 24px;
+}

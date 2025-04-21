@@ -40,58 +40,69 @@ const ShopContextProvider = (props) => {
     }
   };
 
+  // Fetch cart and favorite data on component mount
+  const fetchCartAndFavorites = async (token) => {
+    try {
+      // Fetch cart data
+      const cartResponse = await fetch("http://localhost:5000/getcart", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "auth-token": token,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      });
+      
+      if (cartResponse.ok) {
+        const cartData = await cartResponse.json();
+        const updatedCart = {};
+        Object.keys(cartData).forEach((id) => {
+          updatedCart[id] = cartData[id];
+        });
+        setCartItems(updatedCart);
+      }
+
+      // Fetch favorite data
+      const favoriteResponse = await fetch("http://localhost:5000/getfavourite", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "auth-token": token,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      });
+      
+      if (favoriteResponse.ok) {
+        const favoriteData = await favoriteResponse.json();
+        const updatedFavourite = {};
+        Object.keys(favoriteData).forEach((id) => {
+          updatedFavourite[id] = { quantity: favoriteData[id], size: "N/A" }; // Normalize to object with default size
+        });
+        setFavouriteItems(updatedFavourite);
+      }
+    } catch (error) {
+      console.error("Error fetching cart and favorite data:", error);
+    }
+  };
+
   useEffect(() => {
     fetchAllProducts();
 
     const authToken = localStorage.getItem("auth-token");
     if (authToken) {
       fetchUserName(authToken);
-      fetch("http://localhost:5000/getcart", {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "auth-token": authToken,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({}),
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          const updatedCart = {};
-          Object.keys(data).forEach((id) => {
-            updatedCart[id] = data[id];
-          });
-          setCartItems(updatedCart);
-        })
-        .catch((error) => console.error("Error fetching cart data:", error));
-
-      fetch("http://localhost:5000/getfavourite", {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "auth-token": authToken,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({}),
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          const updatedFavourite = {};
-          Object.keys(data).forEach((id) => {
-            updatedFavourite[id] = { quantity: data[id], size: "N/A" }; // Normalize to object with default size
-          });
-          setFavouriteItems(updatedFavourite);
-        })
-        .catch((error) => console.error("Error fetching favourite data:", error));
+      fetchCartAndFavorites(authToken);
     }
   }, []);
 
   const addtoCart = (itemId, size) => {
     setCartItems((prev) => {
-      const currentQuantity = prev[itemId.toString()] || 0;
+      const currentQuantity = prev[itemId.toString()]?.quantity || 0;
       return {
         ...prev,
-        [itemId.toString()]: currentQuantity + 1,
+        [itemId.toString()]: { quantity: currentQuantity + 1, size },
       };
     });
     const authToken = localStorage.getItem("auth-token");
@@ -113,11 +124,14 @@ const ShopContextProvider = (props) => {
 
   const removefromCart = (itemId) => {
     setCartItems((prev) => {
-      const currentQuantity = prev[itemId.toString()] || 0;
+      const currentQuantity = prev[itemId.toString()]?.quantity || 0;
       if (currentQuantity <= 0) return prev;
       const updatedCart = { ...prev };
-      updatedCart[itemId.toString()] = currentQuantity - 1;
-      if (updatedCart[itemId.toString()] === 0) delete updatedCart[itemId.toString()];
+      updatedCart[itemId.toString()] = { 
+        ...updatedCart[itemId.toString()], 
+        quantity: currentQuantity - 1 
+      };
+      if (updatedCart[itemId.toString()].quantity === 0) delete updatedCart[itemId.toString()];
       return updatedCart;
     });
     const authToken = localStorage.getItem("auth-token");
@@ -146,14 +160,15 @@ const ShopContextProvider = (props) => {
   };
 
   const getTotalCartAmount = () => {
-    return Object.entries(cartItems).reduce((total, [itemId, quantity]) => {
+    return Object.entries(cartItems).reduce((total, [itemId, item]) => {
+      const quantity = item?.quantity || 0;
       const product = all_product.find((p) => p.id.toString() === itemId);
       return product ? total + (product.new_price * quantity) : total;
     }, 0);
   };
 
   const getTotalCartItems = () => {
-    return Object.values(cartItems).reduce((sum, quantity) => sum + (quantity || 0), 0);
+    return Object.values(cartItems).reduce((sum, item) => sum + (item?.quantity || 0), 0);
   };
 
   const addtoFavourite = (itemId, size) => {
@@ -245,41 +260,55 @@ const ShopContextProvider = (props) => {
     }, 0);
   };
 
-  const clearCart = () => {
+  const clearCart = async () => {
     setCartItems(getDefaultCart());
     const authToken = localStorage.getItem("auth-token");
     if (authToken) {
-      fetch("http://localhost:5000/clearcart", {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "auth-token": authToken,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({}),
-      })
-        .then((response) => response.json())
-        .then((data) => console.log("Cart cleared:", data))
-        .catch((error) => console.error("Error clearing cart:", error));
+      try {
+        const response = await fetch("http://localhost:5000/clearcart", {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "auth-token": authToken,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({}),
+        });
+        
+        if (response.ok) {
+          console.log("Cart cleared successfully");
+        } else {
+          console.error("Failed to clear cart");
+        }
+      } catch (error) {
+        console.error("Error clearing cart:", error);
+      }
     }
   };
 
-  const clearFavourite = () => {
+  const clearFavourite = async () => {
     setFavouriteItems(getDefaultFavourite());
     const authToken = localStorage.getItem("auth-token");
     if (authToken) {
-      fetch("http://localhost:5000/clearfavourite", {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "auth-token": authToken,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({}),
-      })
-        .then((response) => response.json())
-        .then((data) => console.log("Favourites cleared:", data))
-        .catch((error) => console.error("Error clearing favourites:", error));
+      try {
+        const response = await fetch("http://localhost:5000/clearfavourite", {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "auth-token": authToken,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({}),
+        });
+        
+        if (response.ok) {
+          console.log("Favourites cleared successfully");
+        } else {
+          console.error("Failed to clear favourites");
+        }
+      } catch (error) {
+        console.error("Error clearing favourites:", error);
+      }
     }
   };
 

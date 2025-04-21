@@ -15,7 +15,7 @@ import {
   Legend
 } from 'recharts'
 import { toast } from 'react-hot-toast'
-import { FiPackage, FiDollarSign, FiShoppingCart, FiUsers, FiClock } from 'react-icons/fi'
+import { FiPackage, FiShoppingCart, FiUsers, FiClock } from 'react-icons/fi'
 import './Overview.css'
 
 const Overview = () => {
@@ -80,7 +80,6 @@ const Overview = () => {
         </div>
         <div className="card">
           <div className="card-icon">
-            <FiDollarSign />
           </div>
           <div className="card-content">
             <h3>Total Earnings</h3>
@@ -101,8 +100,8 @@ const Overview = () => {
             <FiUsers />
           </div>
           <div className="card-content">
-            <h3>New Users (30 days)</h3>
-            <p>{overviewData.newUsers}</p>
+            <h3>Users</h3>
+            <p>{overviewData.totalUsers}</p>
           </div>
         </div>
         <div className="card">
@@ -124,7 +123,7 @@ const Overview = () => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis />
-              <Tooltip formatter={(value) => `Rs. ${value.toLocaleString()}`} />
+              <Tooltip formatter={(value) => `Rs. {value.toLocaleString()}`} />
               <Bar dataKey="sales" fill="#4CAF50" />
             </BarChart>
           </ResponsiveContainer>
@@ -160,10 +159,10 @@ const Overview = () => {
                 label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
               >
                 {overviewData.topProducts.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
+                  <Cell key={`cell-{index}`} fill={pieColors[index % pieColors.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => `${value} orders`} />
+              <Tooltip formatter={(value) => `{value} orders`} />
               <Legend />
             </PieChart>
           </ResponsiveContainer>

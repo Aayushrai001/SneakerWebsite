@@ -485,7 +485,7 @@ const ProductDisplay = ({ product }) => {
                       <div className="admin-feedback">
                         <div className="admin-feedback-header">
                           <span className="admin-label">
-                            <i className="fas fa-shield-alt"></i> Sneaker.Np Response
+                            <i className="fas fa-shield-alt"></i> Sneaker.Np
                           </span>
                           <span className="admin-response-date">
                             {review.adminFeedbackDate ? 

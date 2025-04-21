@@ -51,15 +51,10 @@ const Orders = () => {
       });
       const data = await response.json();
       if (data.success) {
-        if (field === 'delivery' && value === 'delivered') {
-          setOrders(orders.filter(order => order._id !== orderId));
-          toast.success('Order marked as delivered');
-        } else {
-          setOrders(orders.map(order => 
-            order._id === orderId ? { ...order, [field]: value } : order
-          ));
-          toast.success('Order status updated successfully');
-        }
+        setOrders(orders.map(order => 
+          order._id === orderId ? { ...order, [field]: value } : order
+        ));
+        toast.success('Order status updated successfully');
       } else {
         toast.error('Failed to update order status');
       }
@@ -94,41 +89,43 @@ const Orders = () => {
     <div className="orders-container">
       <div className="orders-header">
         <h2>Orders</h2>
-        <div className="filter-container">
-          <button 
-            className="filter-button"
-            onClick={() => setIsFilterOpen(!isFilterOpen)}
-          >
-            <FiFilter /> Filter
-          </button>
-          {isFilterOpen && (
-            <div className="filter-dropdown">
-              <div 
-                className={`filter-option ${filter === 'all' ? 'active' : ''}`}
-                onClick={() => handleFilterChange('all')}
-              >
-                All
+        <div className="header-right">
+          <div className="filter-container">
+            <button 
+              className="filter-button"
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+            >
+              <FiFilter /> Filter
+            </button>
+            {isFilterOpen && (
+              <div className="filter-dropdown">
+                <div 
+                  className={`filter-option ${filter === 'all' ? 'active' : ''}`}
+                  onClick={() => handleFilterChange('all')}
+                >
+                  All
+                </div>
+                <div 
+                  className={`filter-option ${filter === 'today' ? 'active' : ''}`}
+                  onClick={() => handleFilterChange('today')}
+                >
+                  Today
+                </div>
+                <div 
+                  className={`filter-option ${filter === 'week' ? 'active' : ''}`}
+                  onClick={() => handleFilterChange('week')}
+                >
+                  This Week
+                </div>
+                <div 
+                  className={`filter-option ${filter === 'month' ? 'active' : ''}`}
+                  onClick={() => handleFilterChange('month')}
+                >
+                  This Month
+                </div>
               </div>
-              <div 
-                className={`filter-option ${filter === 'today' ? 'active' : ''}`}
-                onClick={() => handleFilterChange('today')}
-              >
-                Today
-              </div>
-              <div 
-                className={`filter-option ${filter === 'week' ? 'active' : ''}`}
-                onClick={() => handleFilterChange('week')}
-              >
-                This Week
-              </div>
-              <div 
-                className={`filter-option ${filter === 'month' ? 'active' : ''}`}
-                onClick={() => handleFilterChange('month')}
-              >
-                This Month
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
@@ -143,9 +140,10 @@ const Orders = () => {
                 <th>Image</th>
                 <th>Quantity</th>
                 <th>Total Price</th>
+                <th>Payment Method</th>
                 <th>Date</th>
-                <th>Payment</th>
-                <th>Delivery</th>
+                <th>Payment Status</th>
+                <th>Delivery Status</th>
               </tr>
             </thead>
             <tbody>
@@ -172,6 +170,7 @@ const Orders = () => {
                   </td>
                   <td>{order.quantity}</td>
                   <td>Rs. {order.totalPrice / 100}</td>
+                  <td>{order.paymentMethod || 'N/A'}</td>
                   <td>{formatDate(order.purchaseDate)}</td>
                   <td>
                     <select

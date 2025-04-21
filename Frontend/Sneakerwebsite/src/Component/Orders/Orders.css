@@ -1,4 +1,4 @@
-.orders {
+.orders-container {
   padding: 20px;
   max-width: 800px;
   margin: auto;
@@ -23,12 +23,12 @@
   font-size: 14px;
 }
 
-ul {
+.orders-list {
   list-style: none;
   padding: 0;
 }
 
-li {
+.order-item {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -102,7 +102,7 @@ li {
   padding: 20px;
 }
 
-.pagination {
+.orders-pagination {
   display: flex;
   justify-content: center;
   margin-top: 20px;
@@ -127,7 +127,7 @@ li {
 
 /* 🌐 Responsive Styles */
 @media (max-width: 768px) {
-  .orders {
+  .orders-container {
     padding: 15px;
   }
 
@@ -147,7 +147,7 @@ li {
     text-align: center;
   }
 
-  li {
+  .order-item {
     flex-direction: column;
     align-items: flex-start;
   }
@@ -178,7 +178,7 @@ li {
     gap: 5px;
   }
 
-  .pagination {
+  .orders-pagination {
     gap: 6px;
   }
 

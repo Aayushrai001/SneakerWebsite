@@ -22,7 +22,7 @@ const Orders = ({ orders, hasReview, setActiveTab }) => {
   };
 
   return (
-    <div className="orders">
+    <div className="orders-container">
       <div className="orders-header">
         <h3>Order History</h3>
         <div className="filter-container">
@@ -42,9 +42,9 @@ const Orders = ({ orders, hasReview, setActiveTab }) => {
         </div>
       </div>
       {currentOrders.length > 0 ? (
-        <ul>
+        <ul className="orders-list">
           {currentOrders.map((order) => (
-            <li key={order._id}>
+            <li key={order._id} className="order-item">
               <img
                 src={order.product.image}
                 alt={order.product.name}
@@ -81,7 +81,7 @@ const Orders = ({ orders, hasReview, setActiveTab }) => {
 
       {/* Pagination Controls */}
       {totalPages > 1 && (
-        <div className="pagination">
+        <div className="orders-pagination">
           {[...Array(totalPages)].map((_, index) => (
             <button
               key={index}

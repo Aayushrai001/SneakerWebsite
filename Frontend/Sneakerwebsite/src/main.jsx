@@ -14,7 +14,7 @@ createRoot(document.getElementById('root')).render(
         <Toaster 
           position="top-left"
           toastOptions={{
-            duration: 2000,
+            duration: 1500,
             style: {
               background: 'white',
               width: '500px',

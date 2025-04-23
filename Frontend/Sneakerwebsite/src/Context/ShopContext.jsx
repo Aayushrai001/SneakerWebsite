@@ -99,16 +99,27 @@ const ShopContextProvider = (props) => {
       if (!response.ok) throw new Error("Network response was not ok");
       const data = await response.json();
       
-      // Update the specific product in all_product state
-      setAll_Product(prevProducts => {
-        return prevProducts.map(product => {
-          if (product.id === productId) {
-            const updatedProduct = data.find(p => p.id === productId);
-            return updatedProduct || product;
+      // Find the updated product without changing the entire state
+      const updatedProduct = data.find(p => p.id === productId);
+      
+      // Only update if there are actual changes
+      if (updatedProduct) {
+        setAll_Product(prevProducts => {
+          // Check if the product has actually changed
+          const currentProduct = prevProducts.find(p => p.id === productId);
+          if (JSON.stringify(currentProduct) === JSON.stringify(updatedProduct)) {
+            return prevProducts; // No changes, return the same array reference
           }
-          return product;
+          
+          // Only update the specific product
+          return prevProducts.map(product => {
+            if (product.id === productId) {
+              return updatedProduct;
+            }
+            return product;
+          });
         });
-      });
+      }
     } catch (error) {
       console.error("Error refreshing product:", error);
     }

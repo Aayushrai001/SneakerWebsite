@@ -60,6 +60,8 @@ if (!fs.existsSync(uploadDir)) {
 
 // Serve static files from the upload directory
 app.use('/images', express.static(uploadDir));
+// Serve profile images
+app.use('/profiles', express.static(path.join(__dirname, 'upload/profiles')));
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
@@ -76,6 +78,35 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024, // Limit file size to 5MB
   },
 }).single('product');
+
+// Configure multer for user profile image uploads
+const userProfileStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const dir = './upload/profiles';
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'profile-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const userProfileUpload = multer({
+  storage: userProfileStorage,
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png'];
+    if (!allowedTypes.includes(file.mimetype)) {
+      return cb(new Error('Only .jpg and .png files are allowed'));
+    }
+    cb(null, true);
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024, // Limit file size to 5MB
+  },
+}).single('profileImage');
 
 // Add product endpoint
 app.post('/addproduct', upload, async (req, res) => {
@@ -238,6 +269,7 @@ const Users = mongoose.model('Users', new mongoose.Schema({
   isVerified: { type: Boolean, default: false },
   verificationToken: { type: String },
   verificationTokenExpires: { type: Date },
+  profileImage: { type: String }, // Add profile image field
 }));
 
 const fetchUser = (req, res, next) => {
@@ -272,19 +304,50 @@ app.get('/user/details', fetchUser, async (req, res) => {
   }
 });
 
-app.put('/user/update', fetchUser, async (req, res) => {
-  try {
-    const { name, phone, address } = req.body;
-    const updatedUser = await Users.findByIdAndUpdate(
-      req.user.id,
-      { name, phone, address },
-      { new: true, select: '-password -cartData -favoriteData -verificationToken' }
-    );
-    if (!updatedUser) return res.status(404).json({ success: false, message: 'User not found' });
-    res.json({ success: true, user: updatedUser, message: 'User details updated successfully' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
+app.put('/user/update', fetchUser, (req, res) => {
+  userProfileUpload(req, res, async function(err) {
+    if (err instanceof multer.MulterError) {
+      return res.status(400).json({ success: false, message: 'File upload error: ' + err.message });
+    } else if (err) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+
+    try {
+      const { name, phone, address } = req.body;
+      const updateData = { name, phone, address };
+
+      // If a new profile image was uploaded, add it to the update data
+      if (req.file) {
+        // Update the image URL to include the full server URL
+        updateData.profileImage = `http://localhost:5000/profiles/${req.file.filename}`;
+      }
+
+      const updatedUser = await Users.findByIdAndUpdate(
+        req.user.id,
+        updateData,
+        { new: true, select: '-password -cartData -favoriteData -verificationToken' }
+      );
+
+      if (!updatedUser) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+
+      // Format the response to include the full image URL
+      const userResponse = {
+        ...updatedUser.toObject(),
+        profileImage: updatedUser.profileImage
+      };
+
+      res.json({ 
+        success: true, 
+        user: userResponse, 
+        message: 'User details updated successfully' 
+      });
+    } catch (error) {
+      console.error('Error updating user:', error);
+      res.status(500).json({ success: false, message: error.message });
+    }
+  });
 });
 
 // Modified /signup endpoint for OTP
@@ -418,7 +481,7 @@ app.post('/resend-verification', async (req, res) => {
   }
 });
 
-// New /verify-otp endpoint
+// Modified /verify-otp endpoint to handle both email verification and password reset
 app.post('/verify-otp', async (req, res) => {
   const { email, otp } = req.body;
   try {
@@ -426,17 +489,25 @@ app.post('/verify-otp', async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found.' });
     }
-    if (user.isVerified) {
-      return res.status(400).json({ success: false, message: 'Account already verified.' });
-    }
+    
+    // Check if this is a password reset OTP or email verification OTP
     if (user.verificationToken !== otp || user.verificationTokenExpires < Date.now()) {
       return res.status(400).json({ success: false, message: 'Invalid or expired OTP.' });
     }
-    user.isVerified = true;
-    user.verificationToken = undefined;
-    user.verificationTokenExpires = undefined;
-    await user.save();
-    res.json({ success: true, message: 'Email verified successfully.' });
+    
+    // For password reset, we don't mark the user as verified yet
+    // We just verify the OTP and let the frontend handle the transition to reset password
+    if (user.isVerified) {
+      // This is a password reset OTP
+      res.json({ success: true, message: 'OTP verified successfully. Please reset your password.' });
+    } else {
+      // This is an email verification OTP
+      user.isVerified = true;
+      user.verificationToken = undefined;
+      user.verificationTokenExpires = undefined;
+      await user.save();
+      res.json({ success: true, message: 'Email verified successfully.' });
+    }
   } catch (error) {
     console.error('Error verifying OTP:', error);
     res.status(500).json({ success: false, message: 'Server error.' });
@@ -1489,17 +1560,25 @@ app.get('/product/:productId/reviews', async (req, res) => {
       product: product._id,
       status: { $ne: 'Deleted' }
     })
-      .populate('user', 'name')
+      .populate('user', 'name profileImage')
       .select('rating feedback adminFeedback date user')
       .sort({ date: -1 })
       .lean();
 
-    console.log('Reviews found:', reviews); // Add this for debugging
+    console.log('Reviews found:', reviews);
 
+    const BASE_URL = process.env.BACKEND_URI || 'http://localhost:5000';
     const formattedReviews = reviews.map(review => ({
       _id: review._id,
-      user: review.user,
-      rating: review.rating, // Ensure rating is included
+      user: {
+        ...review.user,
+        profileImage: review.user.profileImage ? 
+          (review.user.profileImage.startsWith('http') ? 
+            review.user.profileImage : 
+            `${BASE_URL}${review.user.profileImage}`) : 
+          null
+      },
+      rating: review.rating,
       feedback: review.feedback,
       adminFeedback: review.adminFeedback,
       date: review.date,
@@ -1858,6 +1937,82 @@ app.get('/admin/overview', async (req, res) => {
   } catch (error) {
     console.error('Error fetching overview data:', error);
     res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Forgot password endpoint
+app.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  try {
+    const user = await Users.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Store OTP in user document
+    user.verificationToken = otp;
+    user.verificationTokenExpires = otpExpiry;
+    await user.save();
+
+    // Send email with OTP
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Password Reset OTP',
+      html: `
+        <h1>Password Reset Request</h1>
+        <p>You have requested to reset your password. Please use the following OTP to proceed:</p>
+        <h2>${otp}</h2>
+        <p>This OTP will expire in 10 minutes.</p>
+        <p>If you did not request this password reset, please ignore this email.</p>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    res.json({ success: true, message: 'OTP sent to your email.' });
+  } catch (error) {
+    console.error('Error in forgot password:', error);
+    res.status(500).json({ success: false, message: 'Error sending OTP.' });
+  }
+});
+
+// Reset password endpoint
+app.post('/reset-password', async (req, res) => {
+  const { email, otp, newPassword } = req.body;
+  try {
+    const user = await Users.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    // Verify OTP
+    if (user.verificationToken !== otp) {
+      return res.status(400).json({ success: false, message: 'Invalid OTP.' });
+    }
+
+    // Check if OTP has expired
+    if (user.verificationTokenExpires < new Date()) {
+      return res.status(400).json({ success: false, message: 'OTP has expired.' });
+    }
+
+    // Hash the new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // Update password and clear verification token
+    user.password = hashedPassword;
+    user.verificationToken = null;
+    user.verificationTokenExpires = null;
+    await user.save();
+
+    res.json({ success: true, message: 'Password has been reset successfully.' });
+  } catch (error) {
+    console.error('Error in reset password:', error);
+    res.status(500).json({ success: false, message: 'Error resetting password.' });
   }
 });
 

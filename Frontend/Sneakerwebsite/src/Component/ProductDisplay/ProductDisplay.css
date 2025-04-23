@@ -543,12 +543,27 @@
 
 .review-user-info {
   display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.review-user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  background-color: #f0f0f0;
+  border: 2px solid #e0e0e0;
+}
+
+.review-user-details {
+  display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .review-username {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: #2c3e50;
 }
@@ -556,11 +571,12 @@
 .review-rating {
   display: flex;
   gap: 4px;
+  align-items: center;
 }
 
 .review-rating .star-icon {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 .review-date {

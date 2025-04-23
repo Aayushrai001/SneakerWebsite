@@ -4,7 +4,6 @@ import star_icon from '../assets/star_icon.png';
 import star_dull_icon from '../assets/star_dull_icon.png';
 import khalti from '../assets/khalti.png';
 import { ShopContext } from '../../Context/ShopContext';
-import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
@@ -28,13 +27,21 @@ const ProductDisplay = ({ product }) => {
       updateAvailableSizes();
       fetchReviews();
 
-      const pollInterval = setInterval(() => {
-        refreshProduct(product.id);
-      }, 5000);
+      // Increase the polling interval to reduce refresh frequency
+      const pollInterval = setInterval(async () => {
+        try {
+          // Only refresh if the component is still mounted
+          if (product) {
+            await refreshProduct(product.id);
+          }
+        } catch (error) {
+          console.error('Error refreshing product:', error);
+        }
+      }, 15000); // Increased from 5000ms to 15000ms (15 seconds)
 
       return () => clearInterval(pollInterval);
     }
-  }, [product]);
+  }, [product?.id]);
 
   useEffect(() => {
     if (product) {
@@ -269,7 +276,7 @@ const ProductDisplay = ({ product }) => {
     }
     
     if (!selectedSize) {
-      toast('Please select a size');
+      toast.error('Please select a size');
       return;
     }
 
@@ -514,19 +521,29 @@ const ProductDisplay = ({ product }) => {
                 <div key={review._id} className="review-item">
                   <div className="review-header">
                     <div className="review-user-info">
-                      <span className="review-username">
-                        {review.user?.name || 'Anonymous'}
-                      </span>
-                      <div className="review-rating">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <img
-                            key={star}
-                            src={star <= (review.rating || 0) ? star_icon : star_dull_icon}
-                            alt={`${star} star`}
-                            className="star-icon"
-                          />
-                        ))}
-                        <span className="rating-value">({review.rating || 0}/5)</span>
+                      <img
+                        src={review.user.profileImage || 'http://localhost:5000/images/default-avatar.png'}
+                        alt={review.user.name || 'User'}
+                        className="review-user-avatar"
+                        onError={(e) => {
+                          e.target.src = 'http://localhost:5000/images/default-avatar.png';
+                        }}
+                      />
+                      <div className="review-user-details">
+                        <span className="review-username">
+                          {review.user?.name || 'Anonymous'}
+                        </span>
+                        <div className="review-rating">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <img
+                              key={star}
+                              src={star <= (review.rating || 0) ? star_icon : star_dull_icon}
+                              alt={`${star} star`}
+                              className="star-icon"
+                            />
+                          ))}
+                          <span className="rating-value">({review.rating || 0}/5)</span>
+                        </div>
                       </div>
                     </div>
                     <span className="review-date">

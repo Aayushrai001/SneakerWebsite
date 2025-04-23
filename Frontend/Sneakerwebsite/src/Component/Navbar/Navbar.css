@@ -135,6 +135,21 @@
     gap: 25px;
 }
 
+.nav-login-cart button{
+    background-color: #ff3f3f;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    transition: transform 0.2s ease;
+}
+.nav-login-cart button:hover{
+    transform: scale(1.1);
+}       
+
 .nav-icon-wrapper {
     position: relative;
     display: flex;

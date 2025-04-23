@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { toast } from 'react-hot-toast';
 import './orders.css';
 
 const Orders = ({ orders, hasReview, setActiveTab }) => {
@@ -32,6 +33,11 @@ const Orders = ({ orders, hasReview, setActiveTab }) => {
             onChange={(e) => {
               setFilterStatus(e.target.value);
               setCurrentPage(1); // Reset to page 1 when filter changes
+              if (e.target.value === 'all') {
+                toast.success('Showing all orders');
+              } else {
+                toast.success(`Showing ${e.target.value} orders`);
+              }
             }}
             className="filter-dropdown"
           >

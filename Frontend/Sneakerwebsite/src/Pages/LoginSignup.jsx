@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ShopContext } from '../Context/ShopContext';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import './CSS/LoginSignup.css';
 import eyeOpen from '../Component/assets/visible.png';
 import eyeClosed from '../Component/assets/hidden.png';
@@ -14,15 +16,18 @@ const LoginSignup = () => {
     address: '',
     phone: '',
     newPassword: '',
+    confirmPassword: '',
   });
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [isTermsAccepted, setIsTermsAccepted] = useState(false);
   const [signupMessage, setSignupMessage] = useState('');
   const [resendEmail, setResendEmail] = useState('');
   const [verificationEmail, setVerificationEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const { setUserName } = useContext(ShopContext);
   const location = useLocation();
@@ -52,60 +57,100 @@ const LoginSignup = () => {
   const validateForm = () => {
     const newErrors = {};
     if (state === 'Sign Up') {
-      if (!formData.name.trim()) newErrors.name = 'Name is required';
-      if (!formData.address.trim()) newErrors.address = 'Address is required';
-      if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
-      else if (!validatePhone(formData.phone)) newErrors.phone = 'Phone number must be 10 digits';
-      if (!isTermsAccepted) newErrors.terms = 'You must agree to the terms and privacy policy';
+      if (!formData.name.trim()) {
+        toast.error('Name is required');
+        return false;
+      }
+      if (!formData.address.trim()) {
+        toast.error('Address is required');
+        return false;
+      }
+      if (!formData.phone.trim()) {
+        toast.error('Phone number is required');
+        return false;
+      }
+      else if (!validatePhone(formData.phone)) {
+        toast.error('Phone number must be 10 digits');
+        return false;
+      }
+      if (!isTermsAccepted) {
+        toast.error('You must agree to the terms and privacy policy');
+        return false;
+      }
     }
     if (['Sign Up', 'Login', 'ForgotPassword', 'ResetPassword'].includes(state)) {
-      if (!formData.email.trim()) newErrors.email = 'Email is required';
-      else if (!validateEmail(formData.email)) newErrors.email = 'Please enter a valid Gmail address';
+      if (!formData.email.trim()) {
+        toast.error('Email is required');
+        return false;
+      }
+      else if (!validateEmail(formData.email)) {
+        toast.error('Please enter a valid Gmail address');
+        return false;
+      }
     }
     if (state === 'Login' || state === 'Sign Up') {
-      if (!formData.password.trim()) newErrors.password = 'Password is required';
-      else if (!validatePassword(formData.password))
-        newErrors.password =
-          'Password must be at least 8 characters with uppercase, lowercase, number, and special character';
+      if (!formData.password.trim()) {
+        toast.error('Password is required');
+        return false;
+      }
+      else if (!validatePassword(formData.password)) {
+        toast.error('Password must be at least 8 characters with uppercase, lowercase, number, and special character');
+        return false;
+      }
     }
     if (state === 'ResetPassword') {
-      if (!formData.newPassword.trim()) newErrors.newPassword = 'New password is required';
-      else if (!validatePassword(formData.newPassword))
-        newErrors.newPassword =
-          'Password must be at least 8 characters with uppercase, lowercase, number, and special character';
+      if (!formData.newPassword.trim()) {
+        toast.error('New password is required');
+        return false;
+      }
+      else if (!validatePassword(formData.newPassword)) {
+        toast.error('Password must be at least 8 characters with uppercase, lowercase, number, and special character');
+        return false;
+      }
+      if (!formData.confirmPassword.trim()) {
+        toast.error('Please confirm your password');
+        return false;
+      }
+      else if (formData.newPassword !== formData.confirmPassword) {
+        toast.error('Passwords do not match');
+        return false;
+      }
     }
     if (state === 'VerifyOTP') {
-      if (!otp.trim()) newErrors.otp = 'OTP is required';
-      else if (!/^\d{6}$/.test(otp)) newErrors.otp = 'OTP must be a 6-digit number';
+      if (!otp.trim()) {
+        toast.error('OTP is required');
+        return false;
+      }
+      else if (!/^\d{6}$/.test(otp)) {
+        toast.error('OTP must be a 6-digit number');
+        return false;
+      }
     }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return true;
   };
 
   const changeHandler = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    setErrors({ ...errors, [e.target.name]: '' });
   };
 
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
+  const toggleNewPasswordVisibility = () => setShowNewPassword(!showNewPassword);
 
   const handleTermsChange = () => {
     setIsTermsAccepted(!isTermsAccepted);
-    setErrors({ ...errors, terms: '' });
   };
 
   const handleResendEmailChange = (e) => {
     setResendEmail(e.target.value);
-    setErrors({ ...errors, resendEmail: '' });
   };
 
   const handleOtpChange = (e) => {
     setOtp(e.target.value);
-    setErrors({ ...errors, otp: '' });
   };
 
   const login = async () => {
     if (!validateForm()) return;
+    setIsLoading(true);
     try {
       const response = await fetch('http://localhost:5000/login', {
         method: 'POST',
@@ -116,9 +161,11 @@ const LoginSignup = () => {
       if (responseData.success) {
         localStorage.setItem('auth-token', responseData.token);
         setUserName(responseData.name);
+        toast.success('Login successful!');
         navigate('/', { replace: true });
       } else {
         setErrors({ ...errors, api: responseData.errors || 'Login failed' });
+        toast.error(responseData.errors || 'Login failed');
         if (responseData.errors === 'Email not verified') {
           setResendEmail(formData.email);
         }
@@ -126,6 +173,9 @@ const LoginSignup = () => {
     } catch (error) {
       console.error('Error during login:', error);
       setErrors({ ...errors, api: 'An error occurred. Please try again.' });
+      toast.error('An error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -143,16 +193,19 @@ const LoginSignup = () => {
         setVerificationEmail(formData.email);
         setState('VerifyOTP');
         setSignupMessage('OTP sent to your email. Please enter it below.');
+        toast.success('OTP sent to your email!');
       } else {
         console.error('Signup error:', responseData.error);
         setErrors({
           ...errors,
           api: responseData.message || 'Signup failed',
         });
+        toast.error(responseData.message || 'Signup failed');
       }
     } catch (error) {
       console.error('Error during signup:', error);
       setErrors({ ...errors, api: 'An error occurred. Please try again.' });
+      toast.error('An error occurred. Please try again.');
     } finally {
       setIsSendingOtp(false);
     }
@@ -160,6 +213,7 @@ const LoginSignup = () => {
 
   const verifyOtp = async () => {
     if (!validateForm()) return;
+    setIsLoading(true);
     try {
       const response = await fetch('http://localhost:5000/verify-otp', {
         method: 'POST',
@@ -168,19 +222,31 @@ const LoginSignup = () => {
       });
       const responseData = await response.json();
       if (responseData.success) {
-        setState('Login');
-        setSignupMessage('Your email has been verified. Please log in.');
-        setOtp('');
+        if (state === 'VerifyOTP' && signupMessage.includes('Password reset OTP')) {
+          setState('ResetPassword');
+          setSignupMessage('Please enter your new password.');
+          toast.success('OTP verified successfully!');
+        } else {
+          setState('Login');
+          setSignupMessage('Your email has been verified. Please log in.');
+          setOtp('');
+          toast.success('Email verified successfully!');
+        }
       } else {
         setErrors({ ...errors, api: responseData.message || 'Invalid OTP' });
+        toast.error(responseData.message || 'Invalid OTP');
       }
     } catch (error) {
       console.error('Error during OTP verification:', error);
       setErrors({ ...errors, api: 'An error occurred. Please try again.' });
+      toast.error('An error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const resendOtp = async () => {
+    setIsLoading(true);
     try {
       const response = await fetch('http://localhost:5000/resend-otp', {
         method: 'POST',
@@ -190,86 +256,248 @@ const LoginSignup = () => {
       const responseData = await response.json();
       if (responseData.success) {
         setSignupMessage('OTP resent to your email.');
+        toast.success('OTP resent successfully!');
       } else {
         setErrors({ ...errors, api: responseData.message || 'Failed to resend OTP' });
+        toast.error(responseData.message || 'Failed to resend OTP');
       }
     } catch (error) {
       console.error('Error during OTP resend:', error);
       setErrors({ ...errors, api: 'An error occurred. Please try again.' });
+      toast.error('An error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const forgotPassword = async () => {
+    if (!validateForm()) return;
+    setIsLoading(true);
+    try {
+      const response = await fetch('http://localhost:5000/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email }),
+      });
+      const responseData = await response.json();
+      if (responseData.success) {
+        setVerificationEmail(formData.email);
+        setState('VerifyOTP');
+        setSignupMessage('Password reset OTP sent to your email. Please enter it below.');
+        toast.success('OTP sent to your email!');
+      } else {
+        setErrors({ ...errors, api: responseData.message || 'Failed to send reset OTP' });
+        toast.error(responseData.message || 'Failed to send reset OTP');
+      }
+    } catch (error) {
+      console.error('Error during forgot password:', error);
+      setErrors({ ...errors, api: 'An error occurred. Please try again.' });
+      toast.error('An error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resetPassword = async () => {
+    if (!validateForm()) return;
+    setIsLoading(true);
+    try {
+      const response = await fetch('http://localhost:5000/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: verificationEmail, 
+          otp: otp,
+          newPassword: formData.newPassword 
+        }),
+      });
+      const responseData = await response.json();
+      if (responseData.success) {
+        setState('Login');
+        setSignupMessage('Password reset successful. Please log in with your new password.');
+        setOtp('');
+        toast.success('Password reset successful!');
+      } else {
+        setErrors({ ...errors, api: responseData.message || 'Failed to reset password' });
+        toast.error(responseData.message || 'Failed to reset password');
+      }
+    } catch (error) {
+      console.error('Error during password reset:', error);
+      setErrors({ ...errors, api: 'An error occurred. Please try again.' });
+      toast.error('An error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleStateChange = (newState) => {
+    setState(newState);
+    setErrors({});
+    setSignupMessage('');
+    setOtp('');
+    
+    // Reset form data based on the new state
+    if (newState === 'Login') {
+      setFormData({
+        ...formData,
+        password: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+    } else if (newState === 'Sign Up') {
+      setFormData({
+        name: '',
+        email: '',
+        password: '',
+        address: '',
+        phone: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+      setIsTermsAccepted(false);
+    } else if (newState === 'ForgotPassword') {
+      setFormData({
+        ...formData,
+        password: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+    } else if (newState === 'ResetPassword') {
+      setFormData({
+        ...formData,
+        newPassword: '',
+        confirmPassword: '',
+      });
     }
   };
 
   return (
     <div className="loginsignup">
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+      />
       <div className="loginsignup-container">
-        {isSendingOtp ? (
+        {isSendingOtp || isLoading ? (
           <div className="sending-message">
-            <h2>Sending...</h2>
+            <h2>{isSendingOtp ? 'Sending...' : 'Processing...'}</h2>
           </div>
         ) : (
           <>
-            <h1>{state === 'VerifyOTP' ? 'Verify OTP' : state}</h1>
+            <h1>
+              {state === 'VerifyOTP' 
+                ? 'Verify OTP' 
+                : state === 'ForgotPassword' 
+                  ? 'Forgot Password' 
+                  : state === 'ResetPassword' 
+                    ? 'Reset Password' 
+                    : state}
+            </h1>
             <div className="loginsignup-fields">
               {state === 'Sign Up' && (
                 <>
-                  <input
-                    type="text"
-                    name="name"
-                    placeholder="Your Name"
-                    value={formData.name}
-                    onChange={changeHandler}
-                  />
-                  {errors.name && <p className="error">{errors.name}</p>}
-                  <input
-                    type="text"
-                    name="address"
-                    placeholder="Address"
-                    value={formData.address}
-                    onChange={changeHandler}
-                  />
-                  {errors.address && <p className="error">{errors.address}</p>}
-                  <input
-                    type="text"
-                    name="phone"
-                    placeholder="Phone Number"
-                    value={formData.phone}
-                    onChange={changeHandler}
-                  />
-                  {errors.phone && <p className="error">{errors.phone}</p>}
+                  <div className="input-wrapper">
+                    <input
+                      type="text"
+                      name="name"
+                      placeholder="Your Name"
+                      value={formData.name}
+                      onChange={changeHandler}
+                    />
+                  </div>
+                  <div className="input-wrapper">
+                    <input
+                      type="text"
+                      name="address"
+                      placeholder="Address"
+                      value={formData.address}
+                      onChange={changeHandler}
+                    />
+                  </div>
+                  <div className="input-wrapper">
+                    <input
+                      type="text"
+                      name="phone"
+                      placeholder="Phone Number"
+                      value={formData.phone}
+                      onChange={changeHandler}
+                    />
+                  </div>
                 </>
               )}
               {['Sign Up', 'Login', 'ForgotPassword', 'ResetPassword'].includes(state) && (
-                <>
+                <div className="input-wrapper">
                   <input
                     type="email"
                     name="email"
                     placeholder="Email Address"
                     value={formData.email}
                     onChange={changeHandler}
-                  />
-                  {errors.email && <p className="error">{errors.email}</p>}
-                </>
-              )}
-              {['Sign Up', 'Login'].includes(state) && (
-                <div className="password-container">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    name="password"
-                    placeholder="Password"
-                    value={formData.password}
-                    onChange={changeHandler}
-                  />
-                  <img
-                    src={showPassword ? eyeOpen : eyeClosed}
-                    alt="Toggle Password"
-                    onClick={togglePasswordVisibility}
-                    className="password-toggle"
+                    disabled={state === 'ResetPassword'}
                   />
                 </div>
               )}
-              {errors.password && <p className="error">{errors.password}</p>}
-              {state === 'VerifyOTP' && (
+              {['Sign Up', 'Login'].includes(state) && (
+                <div className="input-wrapper">
+                  <div className="password-container">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      name="password"
+                      placeholder="Password"
+                      value={formData.password}
+                      onChange={changeHandler}
+                    />
+                    <img
+                      src={showPassword ? eyeOpen : eyeClosed}
+                      alt="Toggle Password"
+                      onClick={togglePasswordVisibility}
+                      className="password-toggle"
+                    />
+                  </div>
+                </div>
+              )}
+              {state === 'ResetPassword' && (
                 <>
+                  <div className="input-wrapper">
+                    <div className="password-container">
+                      <input
+                        type={showNewPassword ? 'text' : 'password'}
+                        name="newPassword"
+                        placeholder="New Password"
+                        value={formData.newPassword}
+                        onChange={changeHandler}
+                      />
+                      <img
+                        src={showNewPassword ? eyeOpen : eyeClosed}
+                        alt="Toggle Password"
+                        onClick={toggleNewPasswordVisibility}
+                        className="password-toggle"
+                      />
+                    </div>
+                  </div>
+                  <div className="input-wrapper">
+                    <div className="password-container">
+                      <input
+                        type={showNewPassword ? 'text' : 'password'}
+                        name="confirmPassword"
+                        placeholder="Confirm New Password"
+                        value={formData.confirmPassword}
+                        onChange={changeHandler}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+              {state === 'VerifyOTP' && (
+                <div className="input-wrapper">
                   <input
                     type="text"
                     name="otp"
@@ -277,59 +505,87 @@ const LoginSignup = () => {
                     value={otp}
                     onChange={handleOtpChange}
                   />
-                  {errors.otp && <p className="error">{errors.otp}</p>}
-                </>
+                </div>
               )}
             </div>
 
             {state === 'VerifyOTP' ? (
               <>
-                <button onClick={verifyOtp}>Verify OTP</button>
+                <button 
+                  onClick={verifyOtp} 
+                  className="primary-button"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Verifying...' : 'Verify OTP'}
+                </button>
                 <p className="loginsignup-login">
                   Didn't receive OTP? <span onClick={resendOtp}>Resend OTP</span>
                 </p>
               </>
+            ) : state === 'ResetPassword' ? (
+              <button 
+                onClick={resetPassword} 
+                className="primary-button"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Processing...' : 'Reset Password'}
+              </button>
             ) : (
-              <button onClick={state === 'Sign Up' ? signup : login}>Continue</button>
+              <button 
+                onClick={
+                  state === 'Sign Up' 
+                    ? signup 
+                    : state === 'Login' 
+                      ? login 
+                      : state === 'ForgotPassword' 
+                        ? forgotPassword 
+                        : null
+                } 
+                className="primary-button"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Processing...' : 'Continue'}
+              </button>
             )}
 
             {state === 'Sign Up' && (
               <div className="loginsignup-agree">
-                <input type="checkbox" checked={isTermsAccepted} onChange={handleTermsChange} />
+                <input 
+                  type="checkbox" 
+                  checked={isTermsAccepted} 
+                  onChange={handleTermsChange}
+                />
                 <p>I agree to the terms of use & privacy policy</p>
-                {errors.terms && <p className="error">{errors.terms}</p>}
               </div>
             )}
 
             {state === 'Login' && (
               <p className="loginsignup-login">
-                Forgot Password? <span onClick={() => setState('ForgotPassword')}>Reset Here</span>
+                Forgot Password? <span onClick={() => handleStateChange('ForgotPassword')}>Reset Here</span>
               </p>
             )}
 
-            {errors.api && <p className="error">{errors.api}</p>}
             {signupMessage && <p className="signup-message">{signupMessage}</p>}
 
             {state !== 'VerifyOTP' && (
               <p className="loginsignup-login">
-                {state === 'Sign Up' ? 'Already have an account? ' : 'Don’t have an account? '}
+                {state === 'Sign Up' 
+                  ? 'Already have an account? ' 
+                  : state === 'ForgotPassword' 
+                    ? 'Remember your password? ' 
+                    : "Don't have an account? "}
                 <span
                   onClick={() => {
-                    setState(state === 'Sign Up' ? 'Login' : 'Sign Up');
-                    setErrors({});
-                    setSignupMessage('');
-                    setFormData({
-                      name: '',
-                      email: '',
-                      password: '',
-                      address: '',
-                      phone: '',
-                      newPassword: '',
-                    });
-                    setIsTermsAccepted(false);
+                    if (state === 'Sign Up') {
+                      handleStateChange('Login');
+                    } else if (state === 'Login') {
+                      handleStateChange('Sign Up');
+                    } else if (state === 'ForgotPassword') {
+                      handleStateChange('Login');
+                    }
                   }}
                 >
-                  {state === 'Sign Up' ? 'Login Here' : 'Click Here'}
+                  {state === 'Sign Up' ? 'Login Here' : state === 'ForgotPassword' ? 'Login Here' : 'Click Here'}
                 </span>
               </p>
             )}

@@ -1,48 +1,106 @@
 .user-details {
-  background-color: #ffffff;
+  background: #ffffff;
+  border-radius: 12px;
   padding: 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   max-width: 800px;
   margin: 0 auto;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  color: #1a1a1a;
+  margin-right: 170px;
 }
 
 .user-details h3 {
-  font-size: 1.75rem;
-  font-weight: 600;
+  color: #333;
   margin-bottom: 1.5rem;
-  text-align: center;
-  color: #1a1a1a;
-  position: relative;
-  padding-bottom: 0.75rem;
+  font-size: 1.5rem;
+  border-bottom: 2px solid #f0f0f0;
+  padding-bottom: 0.5rem;
 }
 
-.user-details h3::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 60px;
-  height: 3px;
-  background-color: #007bff;
-  border-radius: 2px;
+.profile-image-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 2rem;
+  gap: 1rem;
 }
 
-p {
-  margin: 0.75rem 0;
+.profile-image-container {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #f0f0f0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: #ffffff;
+}
+
+.profile-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-image-placeholder {
+  width: 100%;
+  height: 100%;
+  background: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.image-upload {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.upload-button {
+  background: #4CAF50;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  border: none;
+}
+
+.upload-button:hover {
+  background: #45a049;
+}
+
+.image-hint {
+  color: #666;
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.user-info {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.user-info p {
+  margin: 0.5rem 0;
+  color: #333;
   font-size: 1rem;
-  line-height: 1.5;
-  color: #4a4a4a;
+}
+
+.user-info strong {
+  color: #555;
+  min-width: 100px;
+  display: inline-block;
 }
 
 .edit-form {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  margin-top: 1.5rem;
+  gap: 1.5rem;
 }
 
 .form-group {
@@ -52,88 +110,96 @@ p {
 }
 
 .form-group label {
+  color: #555;
   font-weight: 500;
-  color: #1a1a1a;
-  font-size: 0.95rem;
 }
 
 .form-group input,
 .form-group textarea {
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  border: 1.5px solid #e0e0e0;
+  padding: 0.8rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
   font-size: 1rem;
-  transition: all 0.2s ease;
-  background-color: #f8f9fa;
+  transition: border-color 0.3s ease;
+  background-color: #ffffff;
 }
 
 .form-group input:focus,
 .form-group textarea:focus {
+  border-color: #4CAF50;
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
-  background-color: #ffffff;
 }
 
 .form-group textarea {
-  resize: vertical;
   min-height: 100px;
+  resize: vertical;
 }
 
 .form-buttons {
   display: flex;
-  justify-content: flex-end;
   gap: 1rem;
-  margin-top: 1.5rem;
+  margin-top: 1rem;
 }
 
-button {
-  padding: 0.75rem 1.5rem;
+.save-button,
+.cancel-button,
+.edit-button {
+  padding: 0.8rem 1.5rem;
   border: none;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  font-weight: 500;
+  border-radius: 4px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  font-weight: 500;
+  transition: all 0.3s ease;
 }
 
-button:hover {
-  transform: translateY(-1px);
+.save-button {
+  background: #4CAF50;
+  color: white;
+}
+
+.save-button:hover {
+  background: #45a049;
+}
+
+.cancel-button {
+  background: #f44336;
+  color: white;
+}
+
+.cancel-button:hover {
+  background: #da190b;
 }
 
 .edit-button {
-  margin-top: 1.5rem;
-  background-color: #007bff;
+  background: #2196F3;
   color: white;
   width: 100%;
-  max-width: 200px;
-  margin-left: auto;
-  margin-right: auto;
 }
 
 .edit-button:hover {
-  background-color: #0056b3;
-  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2);
+  background: #1976D2;
 }
 
-.form-buttons button:first-child {
-  background-color: #28a745;
-  color: white;
+/* Toast customization */
+.Toastify__toast {
+  border-radius: 8px;
+  font-family: inherit;
 }
 
-.form-buttons button:first-child:hover {
-  background-color: #218838;
-  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
+.Toastify__toast--success {
+  background: #4CAF50;
 }
 
-.form-buttons button:last-child {
-  background-color: #dc3545;
-  color: white;
+.Toastify__toast--error {
+  background: #f44336;
 }
 
-.form-buttons button:last-child:hover {
-  background-color: #c82333;
-  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2);
+/* Responsive design */
+@media (max-width: 1024px) {
+  .user-details {
+    margin-right: 0;
+    max-width: 90%;
+  }
 }
 
 @media (max-width: 768px) {
@@ -142,15 +208,52 @@ button:hover {
     margin: 1rem;
   }
 
-  .user-details h3 {
-    font-size: 1.5rem;
+  .profile-image-container {
+    width: 120px;
+    height: 120px;
   }
 
   .form-buttons {
     flex-direction: column;
   }
 
-  .form-buttons button {
+  .save-button,
+  .cancel-button,
+  .edit-button {
     width: 100%;
+  }
+
+  .user-info {
+    padding: 1rem;
+  }
+
+  .user-info p {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .user-details {
+    padding: 1rem;
+    margin: 0.5rem;
+  }
+
+  .user-details h3 {
+    font-size: 1.2rem;
+  }
+
+  .profile-image-container {
+    width: 100px;
+    height: 100px;
+  }
+
+  .form-group input,
+  .form-group textarea {
+    padding: 0.6rem;
+    font-size: 0.9rem;
+  }
+
+  .user-info strong {
+    min-width: 80px;
   }
 }

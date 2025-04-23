@@ -3,19 +3,26 @@ import { Link, useLocation } from 'react-router-dom';
 import { ShopContext } from '../../Context/ShopContext';
 import './Navbar.css';
 import logo from '../assets/logo.png';
+import search from '../assets/search.png';
 import cartIcon from '../assets/cart_icon.png';
 import heartIcon from '../assets/heart-icon.png';
-import navDropdown from '../assets/nav_dropdown.png';
 import menuIcon from '../assets/menu.png';
 
 const Navbar = () => {
   const [activeMenu, setActiveMenu] = useState("Home");
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const menuRef = useRef();
-  const { getTotalCartItems, getTotalFavouriteItems, userName } = useContext(ShopContext);
+  const { getTotalCartItems, getTotalFavouriteItems, userName, resetState, isLoading, initializeUserData } = useContext(ShopContext);
   const location = useLocation();
 
   const isAuthenticated = localStorage.getItem('auth-token');
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      initializeUserData(isAuthenticated);
+    }
+  }, [isAuthenticated]);
 
   // Update activeMenu based on current route
   useEffect(() => {
@@ -40,6 +47,12 @@ const Navbar = () => {
     setDropdownOpen(!dropdownOpen);
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('auth-token');
+    resetState();
+    setDropdownOpen(false);
+  };
+
   const menuItems = [
     { name: "Shop", path: "/" },
     { name: "Mens", path: "/mens" },
@@ -49,6 +62,12 @@ const Navbar = () => {
     { name: "About Us", path: "/aboutus" },
   ];
 
+  const handleSearch = (e) => {
+    e.preventDefault();
+    // Implement search functionality here
+    console.log('Searching for:', searchQuery);
+  };
+
   return (
     <nav className="navbar">
       <div className="nav-logo">
@@ -56,38 +75,53 @@ const Navbar = () => {
         <p>Sneaker.NP</p>
       </div>
 
-      <img className="nav-dropdown" onClick={toggleNavMenu} src={navDropdown} alt="Menu" />
+      <div className="nav-search">
+        <form onSubmit={handleSearch}>
+          <input
+            type="text"
+            placeholder="Search products..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <button type="submit" className="search-button">
+            <img src={search} alt="" className='search'/>
+          </button>
+        </form>
+      </div>
+
 
       <ul ref={menuRef} className="nav-menu">
         {menuItems.map(({ name, path }) => (
           <li key={name} className={activeMenu === name ? 'active' : ''} onClick={() => setActiveMenu(name)}>
-            <Link to={path} className="nav-link">{name}</Link>
+            <Link to={path}>{name}</Link>
             <hr />
           </li>
         ))}
       </ul>
 
       <div className="nav-login-cart">
-        {isAuthenticated ? (
-          <>
-            <p className="nav-user-name">{userName || "Loading..."}</p>
-            <Link to="/cart" className="nav-icon-wrapper">
-              <img src={cartIcon} alt="Cart" />
-              <div className="nav-cart-count">{getTotalCartItems() || 0}</div>
-            </Link>
-            <Link to="/favourite" className="nav-icon-wrapper">
-              <img src={heartIcon} alt="Favourite" />
-              <div className="nav-cart-count">{getTotalFavouriteItems() || 0}</div>
-            </Link>
-            <div className="nav-user-menu">
-              <img
-                src={menuIcon}
-                alt="User Menu"
-                className="nav-menu-icon"
-                onClick={toggleUserMenu}
-              />
+        {!isAuthenticated && (
+          <Link to="/login"><button>Login</button></Link>
+        )}
+        <Link to="/favourite" className="nav-icon-wrapper">
+          <img src={heartIcon} alt="Favourite" />
+          <div className="nav-cart-count">{isLoading ? "..." : getTotalFavouriteItems() || 0}</div>
+        </Link>
+        <Link to="/cart" className="nav-icon-wrapper">
+          <img src={cartIcon} alt="Cart" />
+          <div className="nav-cart-count">{isLoading ? "..." : getTotalCartItems() || 0}</div>
+        </Link>
+        {isLoading ? (
+          <span className="loading-text">Loading...</span>
+        ) : (
+          isAuthenticated && (
+            <div className="user-section">
+              <div className="username-display" onClick={() => setDropdownOpen(!dropdownOpen)}>
+                {userName || 'User'}
+                <img src={menuIcon} alt="" className="menu-icon" />
+              </div>
               {dropdownOpen && (
-                <div className="nav-user-dropdown">
+                <div className="dropdown-menu">
                   <Link
                     to="/UserPanel"
                     className="nav-dropdown-link"
@@ -98,29 +132,14 @@ const Navbar = () => {
                   <Link
                     to="/"
                     className="nav-dropdown-link"
-                    onClick={() => {
-                      localStorage.removeItem('auth-token');
-                      setDropdownOpen(false);
-                    }}
+                    onClick={handleLogout}
                   >
                     Log Out
                   </Link>
                 </div>
               )}
             </div>
-          </>
-        ) : (
-          <>
-            <Link to="/login"><button>Login</button></Link>
-            <Link to="/cart" className="nav-icon-wrapper">
-              <img src={cartIcon} alt="Cart" />
-              <div className="nav-cart-count">{getTotalCartItems() || 0}</div>
-            </Link>
-            <Link to="/favourite" className="nav-icon-wrapper">
-              <img src={heartIcon} alt="Favourite" />
-              <div className="nav-cart-count">{getTotalFavouriteItems() || 0}</div>
-            </Link>
-          </>
+          )
         )}
       </div>
     </nav>

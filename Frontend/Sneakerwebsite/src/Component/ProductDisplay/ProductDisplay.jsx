@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
 const ProductDisplay = ({ product }) => {
-  const { addtoCart, addtoFavourite, cartItems, favouriteItems } = useContext(ShopContext);
+  const { addtoCart, addtoFavourite, cartItems, favouriteItems, refreshProduct } = useContext(ShopContext);
   const [showCheckout, setShowCheckout] = useState(false);
   const [selectedSize, setSelectedSize] = useState('');
   const [quantity, setQuantity] = useState(1);
@@ -25,20 +25,44 @@ const ProductDisplay = ({ product }) => {
 
   useEffect(() => {
     if (product) {
-      const sizesWithStock = product.sizes
-        .filter(size => size.quantity > 0)
-        .sort((a, b) => {
-          const sizeA = isNaN(a.size) ? a.size : parseFloat(a.size);
-          const sizeB = isNaN(b.size) ? b.size : parseFloat(b.size);
-          if (typeof sizeA === 'number' && typeof sizeB === 'number') {
-            return sizeA - sizeB;
-          }
-          return sizeA.localeCompare(sizeB);
-        });
-      setAvailableSizes(sizesWithStock);
+      updateAvailableSizes();
       fetchReviews();
+
+      const pollInterval = setInterval(() => {
+        refreshProduct(product.id);
+      }, 5000);
+
+      return () => clearInterval(pollInterval);
     }
   }, [product]);
+
+  useEffect(() => {
+    if (product) {
+      updateAvailableSizes();
+    }
+  }, [product?.sizes]);
+
+  const updateAvailableSizes = () => {
+    if (!product) return;
+    
+    const sizesWithStock = product.sizes
+      .filter(size => size.quantity > 0)
+      .sort((a, b) => {
+        const sizeA = isNaN(a.size) ? a.size : parseFloat(a.size);
+        const sizeB = isNaN(b.size) ? b.size : parseFloat(b.size);
+        if (typeof sizeA === 'number' && typeof sizeB === 'number') {
+          return sizeA - sizeB;
+        }
+        return sizeA.localeCompare(sizeB);
+      });
+    
+    setAvailableSizes(sizesWithStock);
+    
+    if (selectedSize && !sizesWithStock.find(s => s.size === selectedSize)) {
+      setSelectedSize('');
+      setQuantity(1);
+    }
+  };
 
   useEffect(() => {
     if (reviews.length > 0) {
@@ -186,7 +210,6 @@ const ProductDisplay = ({ product }) => {
         } else {
           toast.error('Missing redirect URL for COD success page');
         }
-        // Clear the cart
         await fetch('http://localhost:5000/clearcart', {
           method: 'POST',
           headers: {
@@ -213,20 +236,30 @@ const ProductDisplay = ({ product }) => {
       toast.error('Please log in to add items to your cart');
       return;
     }
+    
     if (!selectedSize) {
       toast.error('Please select a size');
       return;
     }
+
     const sizeData = product?.sizes.find(s => s.size === selectedSize);
     if (!sizeData || sizeData.quantity < quantity) {
-      alert(`Only ${sizeData?.quantity || 0} items available for size ${selectedSize}`);
+      toast.error(`Only ${sizeData?.quantity || 0} items available for size ${selectedSize}`);
       return;
     }
-    for (let i = 0; i < quantity; i++) {
-      addtoCart(product.id, selectedSize);
+
+    try {
+      for (let i = 0; i < quantity; i++) {
+        addtoCart(product.id, selectedSize);
+      }
+      
+      toast.success('Added to cart successfully!');
+      setQuantity(1);
+      setSelectedSize('');
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast.error('Failed to add to cart. Please try again.');
     }
-    setQuantity(1);
-    setSelectedSize('');
   };
 
   const handleAddToFavourite = () => {
@@ -234,13 +267,30 @@ const ProductDisplay = ({ product }) => {
       toast.error('Please log in to add items to your favorites');
       return;
     }
+    
     if (!selectedSize) {
-      toast.error('Please select a size');
+      toast('Please select a size');
       return;
     }
-    addtoFavourite(product.id, selectedSize);
-    setQuantity(1);
-    setSelectedSize('');
+
+    const sizeData = product?.sizes.find(s => s.size === selectedSize);
+    if (!sizeData || sizeData.quantity < quantity) {
+      toast.error(`Only ${sizeData?.quantity || 0} items available for size ${selectedSize}`);
+      return;
+    }
+
+    try {
+      for (let i = 0; i < quantity; i++) {
+        addtoFavourite(product.id, selectedSize);
+      }
+      
+      toast.success('Added to favorites successfully!');
+      setQuantity(1);
+      setSelectedSize('');
+    } catch (error) {
+      console.error('Error adding to favorites:', error);
+      toast.error('Failed to add to favorites. Please try again.');
+    }
   };
 
   const averageRating = reviews.length > 0
@@ -330,8 +380,12 @@ const ProductDisplay = ({ product }) => {
             <button className="productdisplay-right-cart" onClick={handleAddToCart}>
               ADD TO CART {cartQuantity > 0 && `(${cartQuantity})`}
             </button>
-            <button className="productdisplay-right-favorite" onClick={handleAddToFavourite}>
-              ADD TO FAVORITE {favouriteQuantity > 0 && `(${favouriteQuantity})`}
+            <button 
+              className={`productdisplay-right-favorite ${favouriteQuantity > 0 ? 'active' : ''}`} 
+              onClick={handleAddToFavourite}
+            >
+              {favouriteQuantity > 0 ? 'IN FAVORITES' : 'ADD TO FAVORITES'} 
+              {favouriteQuantity > 0 && `(${favouriteQuantity})`}
             </button>
           </div>
           <button className="checkout" onClick={() => setShowCheckout(true)}>CHECKOUT</button>

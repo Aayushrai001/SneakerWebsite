@@ -1,106 +1,118 @@
-.cartitems {
+.favouriteitems {
     margin: 100px 170px;
 }
 
-.cartitems hr {
+.favouriteitems hr {
     height: 3px;
     background: #e2e2e2;
-    border: none;
+    border: 0;
 }
 
-.cartitems-format-main {
+.favouriteitems-format-main {
     display: grid;
-    grid-template-columns: 0.5fr 2fr 1fr 1fr 1fr 1fr 0.5fr;
+    grid-template-columns: 0.5fr 2fr 1fr 1fr 1fr 1fr 1fr 0.5fr;
     align-items: center;
     gap: 75px;
-    padding: 20px 0;
+    padding: 20px 0px;
     color: #454545;
     font-size: 18px;
     font-weight: 600;
-    text-align: left;
 }
 
-.cartitems-format {
+.favouriteitems-format {
     display: grid;
-    grid-template-columns: 0.5fr 2fr 1fr 1fr 1fr 1fr 0.5fr;
+    grid-template-columns: 0.5fr 2fr 1fr 1fr 1fr 1fr 1fr 0.5fr;
     align-items: center;
     gap: 75px;
-    padding: 15px 0;
+    padding: 20px 0px;
+    color: #454545;
     font-size: 17px;
     font-weight: 500;
 }
 
-.carticon-product-icon {
+.favouriteicon-product-icon {
     height: 62px;
-    width: auto;
-    object-fit: contain;
 }
 
-.cartitem-quantity-controls {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.cartitem-quantity-controls button {
-    width: 25px;
-    height: 25px;
-    border: 1px solid #ddd;
-    background: #fff;
+.favouriteitems-remove-icon {
+    width: 15px;
+    margin: 0px 40px;
     cursor: pointer;
-    border-radius: 4px;
-    font-size: 16px;
 }
 
-.cartitem-quantity-controls span {
-    min-width: 20px;
-    text-align: center;
-}
-
-.cartitems-remove-button {
-    padding: 5px 10px;
-    background-color: #ff5a5a;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    text-transform: uppercase;
-    transition: background-color 0.2s;
-}
-
-.cartitems-remove-button:hover {
-    background-color: #e04e4e;
-}
-
-.cartitems-down {
+.favouriteitems-down {
     display: flex;
     margin: 100px 0px;
 }
 
-.cartitems-total {
+.favouriteitems-total {
     flex: 1;
     display: flex;
     flex-direction: column;
+    margin-right: 200px;
     gap: 40px;
 }
 
-.cartitems-total-item {
+.favouriteitems-total-item {
     display: flex;
     justify-content: space-between;
     padding: 15px 0px;
 }
 
-.cartitems-total button {
+.favouriteitems-total button {
     width: 262px;
     height: 58px;
     outline: none;
     border: none;
     background: #ff5a5a;
-    color: #fff;
+    color: white;
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
+}
+
+.favouriteitems-total button:disabled {
+    background: #cccccc;
+    cursor: not-allowed;
+}
+
+/* New styles for selection features */
+.item-checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.select-all-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.select-all-checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.select-all-container label {
+    font-size: 16px;
+    font-weight: 500;
+    color: #454545;
+}
+
+/* Checkout modal styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
 }
 
 .checkout-container {
@@ -108,196 +120,214 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: white;
-    padding: 20px;
-    width: 800px;
-    height: 470px;
-    border-radius: 10px;
-    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-    text-align: center;
-    z-index: 1000;
+    background-color: white;
+    padding: 40px;
+    border-radius: 15px;
+    z-index: 1001;
+    max-width: 800px;
+    width: 90%;
+    max-height: 90vh;
     overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.checkout-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    font-size: 28px;
+    cursor: pointer;
+    color: #666;
+    transition: color 0.3s ease;
+}
+
+.checkout-close:hover {
+    color: #ff5a5a;
 }
 
 .checkout-container h2 {
-    font-size: 35px;
-    font-weight: bold;
-    margin-bottom: 15px;
+    font-size: 32px;
+    margin-bottom: 25px;
+    color: #333;
+    text-align: center;
 }
 
 .checkout-info {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 18px;
-    margin-bottom: 15px;
-    padding: 10px;
-    background: #f9f9f9;
-    border-radius: 5px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.checkout-info div {
-    flex: 1;
-    text-align: left;
-}
-
-.checkout-info h3 {
-    font-size: 16px;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 5px;
-    text-transform: uppercase;
-}
-
-.checkout-info p {
-    font-size: 14px;
-    color: #666;
-    margin: 0;
-}
-
-.checkout-info:last-child {
-    background: #e0f7fa;
-    font-weight: bold;
-    padding: 15px;
-}
-
-.checkout-method h1 {
-    font-size: 35px;
-    margin-bottom: 10px;
-}
-
-.checkout-container button {
-    width: 100%;
-    padding: 10px;
-    margin-top: 10px;
-    border: none;
-    border-radius: 5px;
-    font-size: 16px;
-    cursor: pointer;
-    transition: background 0.3s ease;
-}
-
-.checkout-container button:first-of-type {
-    background: #5c67f2;
-    font-size: 35px;
-    color: white;
-}
-
-.checkout-container button:first-of-type:hover {
-    background: #4a54e1;
-}
-
-.checkout-container button:last-of-type {
-    background: #f44336;
-    height: 70px;
-    font-size: 35px;
-    color: white;
-}
-
-.checkout-container button:last-of-type:hover {
-    background: #d32f2f;
-}
-
-.khalti {
-    width: 70px;
-    height: auto;
-    margin-left: 8px;
-    vertical-align: middle;
-}
-
-.payment-options {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
     margin: 20px 0;
-}
-
-.payment-option {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.payment-option:hover {
+    padding: 20px;
+    border: 1px solid #eee;
+    border-radius: 10px;
     background-color: #f9f9f9;
 }
 
-.payment-option input[type="radio"] {
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
+.payment-options {
+    margin-top: 30px;
 }
 
-.payment-option label {
-    font-size: 16px;
-    cursor: pointer;
+.payment-options h3 {
+    font-size: 24px;
+    margin-bottom: 15px;
+    color: #333;
 }
 
-.khalti-btn, .cod-btn {
+.payment-buttons {
+    display: flex;
+    gap: 20px;
+    margin-top: 20px;
+    justify-content: center;
+}
+
+.payment-button {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 10px;
-    width: 100%;
-    padding: 12px;
-    margin: 10px 0;
-    border: none;
-    border-radius: 5px;
-    font-size: 16px;
-    font-weight: 600;
+    gap: 15px;
+    padding: 15px 30px;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    background: white;
     cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.payment-button.selected {
+    border-color: #ff5a5a;
+    background: #fff5f5;
+    transform: scale(1.05);
+}
+
+.payment-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.payment-button img {
+    height: 30px;
+}
+
+/* Confirmation modal styles */
+.confirmation-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    padding: 40px;
+    border-radius: 15px;
+    z-index: 1001;
+    max-width: 700px;
+    width: 90%;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.confirmation-modal h3 {
+    font-size: 28px;
+    margin-bottom: 15px;
+    color: #333;
+    text-align: center;
+}
+
+.confirmation-modal p {
+    font-size: 18px;
+    margin-bottom: 20px;
+    text-align: center;
+    color: #555;
+}
+
+.order-summary {
+    margin: 25px 0;
+    padding: 20px;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    background-color: #f9f9f9;
+}
+
+.confirmation-actions {
+    display: flex;
+    gap: 20px;
+    margin-top: 30px;
+    justify-content: center;
+}
+
+.confirm-btn {
+    padding: 15px 30px;
+    background: #ff5a5a;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: 600;
     transition: all 0.3s ease;
 }
 
-.khalti-btn {
-    background-color: #5C2D91;
-    color: white;
+.confirm-btn:hover {
+    background: #e04e4e;
+    transform: scale(1.05);
 }
 
-.cod-btn {
-    background-color: #4CAF50;
-    color: white;
+.cancel-confirm-btn {
+    padding: 15px 30px;
+    background: #eee;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: 600;
+    transition: all 0.3s ease;
 }
 
-.khalti-btn:hover, .cod-btn:hover {
-    opacity: 0.9;
+.cancel-confirm-btn:hover {
+    background: #ddd;
+    transform: scale(1.05);
 }
 
-.khalti-btn:disabled, .cod-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+/* Favourite item quantity controls */
+.favouriteitem-quantity-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
-.khalti {
-    width: 24px;
-    height: 24px;
+.favouriteitem-quantity-controls button {
+    width: 30px;
+    height: 30px;
+    border: 1px solid #ddd;
+    background: white;
+    border-radius: 5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+
+.favouriteitem-quantity-controls span {
+    min-width: 30px;
+    text-align: center;
 }
 
 @media (max-width: 768px) {
-    .cartitems-down {
+    .favouriteitems-down {
         flex-direction: column;
     }
 
-    .cartitems-format-main {
+    .favouriteitems-format-main {
         display: none;
     }
 
-    .cartitems-format {
+    .favouriteitems-format {
         grid-template-columns: 1fr 2fr;
         gap: 20px;
     }
 
-    .cartitems-format > *:nth-child(3),
-    .cartitems-format > *:nth-child(4),
-    .cartitems-format > *:nth-child(5),
-    .cartitems-format > *:nth-child(6),
-    .cartitems-format > *:nth-child(7) {
+    .favouriteitems-format > *:nth-child(3),
+    .favouriteitems-format > *:nth-child(4),
+    .favouriteitems-format > *:nth-child(5),
+    .favouriteitems-format > *:nth-child(6),
+    .favouriteitems-format > *:nth-child(7),
+    .favouriteitems-format > *:nth-child(8) {
         grid-column: span 2;
     }
 

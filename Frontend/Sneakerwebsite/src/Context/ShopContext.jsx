@@ -10,6 +10,77 @@ const ShopContextProvider = (props) => {
   const [cartItems, setCartItems] = useState(getDefaultCart());
   const [favouriteItems, setFavouriteItems] = useState(getDefaultFavourite());
   const [userName, setUserName] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+
+  const resetState = () => {
+    setCartItems(getDefaultCart());
+    setFavouriteItems(getDefaultFavourite());
+    setUserName("");
+  };
+
+  const initializeUserData = async (token) => {
+    setIsLoading(true);
+    try {
+      // Fetch username
+      const nameResponse = await fetch("http://localhost:5000/getusername", {
+        method: "GET",
+        headers: {
+          "auth-token": token,
+          "Content-Type": "application/json",
+        },
+      });
+      const nameData = await nameResponse.json();
+      if (nameData.success) {
+        setUserName(nameData.name);
+      }
+
+      // Fetch cart data
+      const cartResponse = await fetch("http://localhost:5000/getcart", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "auth-token": token,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      });
+      const cartData = await cartResponse.json();
+      const updatedCart = {};
+      Object.keys(cartData).forEach((id) => {
+        if (typeof cartData[id] === 'number') {
+          updatedCart[id] = { quantity: cartData[id], size: 'N/A' };
+        } else if (typeof cartData[id] === 'object') {
+          updatedCart[id] = cartData[id];
+        }
+      });
+      setCartItems(updatedCart);
+
+      // Fetch favorite data
+      const favoriteResponse = await fetch("http://localhost:5000/getfavourite", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "auth-token": token,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      });
+      const favoriteData = await favoriteResponse.json();
+      const updatedFavourite = {};
+      Object.keys(favoriteData).forEach((id) => {
+        if (typeof favoriteData[id] === 'number') {
+          updatedFavourite[id] = { quantity: favoriteData[id], size: 'N/A' };
+        } else if (typeof favoriteData[id] === 'object') {
+          updatedFavourite[id] = favoriteData[id];
+        }
+      });
+      setFavouriteItems(updatedFavourite);
+    } catch (error) {
+      console.error("Error initializing user data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const fetchAllProducts = async () => {
     try {
@@ -19,6 +90,27 @@ const ShopContextProvider = (props) => {
       setAll_Product(data);
     } catch (error) {
       console.error("Error fetching data:", error);
+    }
+  };
+
+  const refreshProduct = async (productId) => {
+    try {
+      const response = await fetch(`http://localhost:5000/allproducts`);
+      if (!response.ok) throw new Error("Network response was not ok");
+      const data = await response.json();
+      
+      // Update the specific product in all_product state
+      setAll_Product(prevProducts => {
+        return prevProducts.map(product => {
+          if (product.id === productId) {
+            const updatedProduct = data.find(p => p.id === productId);
+            return updatedProduct || product;
+          }
+          return product;
+        });
+      });
+    } catch (error) {
+      console.error("Error refreshing product:", error);
     }
   };
 
@@ -40,71 +132,34 @@ const ShopContextProvider = (props) => {
     }
   };
 
-  // Fetch cart and favorite data on component mount
-  const fetchCartAndFavorites = async (token) => {
-    try {
-      // Fetch cart data
-      const cartResponse = await fetch("http://localhost:5000/getcart", {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "auth-token": token,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({}),
-      });
-      
-      if (cartResponse.ok) {
-        const cartData = await cartResponse.json();
-        const updatedCart = {};
-        Object.keys(cartData).forEach((id) => {
-          updatedCart[id] = cartData[id];
-        });
-        setCartItems(updatedCart);
-      }
-
-      // Fetch favorite data
-      const favoriteResponse = await fetch("http://localhost:5000/getfavourite", {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "auth-token": token,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({}),
-      });
-      
-      if (favoriteResponse.ok) {
-        const favoriteData = await favoriteResponse.json();
-        const updatedFavourite = {};
-        Object.keys(favoriteData).forEach((id) => {
-          updatedFavourite[id] = { quantity: favoriteData[id], size: "N/A" }; // Normalize to object with default size
-        });
-        setFavouriteItems(updatedFavourite);
-      }
-    } catch (error) {
-      console.error("Error fetching cart and favorite data:", error);
-    }
-  };
-
   useEffect(() => {
     fetchAllProducts();
-
     const authToken = localStorage.getItem("auth-token");
-    if (authToken) {
-      fetchUserName(authToken);
-      fetchCartAndFavorites(authToken);
+    
+    if (!authToken) {
+      resetState();
+      setIsLoading(false);
+      return;
     }
+
+    initializeUserData(authToken);
   }, []);
 
   const addtoCart = (itemId, size) => {
     setCartItems((prev) => {
-      const currentQuantity = prev[itemId.toString()]?.quantity || 0;
+      // Initialize the cart item if it doesn't exist
+      if (!prev[itemId]) {
+        prev[itemId] = { quantity: 0, size: size || 'N/A' };
+      }
       return {
         ...prev,
-        [itemId.toString()]: { quantity: currentQuantity + 1, size },
+        [itemId]: {
+          quantity: prev[itemId].quantity + 1,
+          size: size || prev[itemId].size
+        }
       };
     });
+
     const authToken = localStorage.getItem("auth-token");
     if (authToken) {
       fetch("http://localhost:5000/AddToCart", {
@@ -124,16 +179,19 @@ const ShopContextProvider = (props) => {
 
   const removefromCart = (itemId) => {
     setCartItems((prev) => {
-      const currentQuantity = prev[itemId.toString()]?.quantity || 0;
-      if (currentQuantity <= 0) return prev;
+      if (!prev[itemId] || prev[itemId].quantity <= 0) return prev;
       const updatedCart = { ...prev };
-      updatedCart[itemId.toString()] = { 
-        ...updatedCart[itemId.toString()], 
-        quantity: currentQuantity - 1 
-      };
-      if (updatedCart[itemId.toString()].quantity === 0) delete updatedCart[itemId.toString()];
+      if (prev[itemId].quantity === 1) {
+        delete updatedCart[itemId];
+      } else {
+        updatedCart[itemId] = {
+          ...updatedCart[itemId],
+          quantity: updatedCart[itemId].quantity - 1
+        };
+      }
       return updatedCart;
     });
+
     const authToken = localStorage.getItem("auth-token");
     if (authToken) {
       fetch("http://localhost:5000/RemoveCart", {
@@ -151,6 +209,40 @@ const ShopContextProvider = (props) => {
     }
   };
 
+  // New function to completely remove an item from cart
+  const removeItemFromCart = (itemId) => {
+    setCartItems((prev) => {
+      const updatedCart = { ...prev };
+      delete updatedCart[itemId];
+      return updatedCart;
+    });
+
+    const authToken = localStorage.getItem("auth-token");
+    if (authToken) {
+      // Make multiple API calls to completely remove the item
+      const quantity = cartItems[itemId]?.quantity || 0;
+      const promises = [];
+      
+      for (let i = 0; i < quantity; i++) {
+        promises.push(
+          fetch("http://localhost:5000/RemoveCart", {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              "auth-token": authToken,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ itemId: itemId.toString() }),
+          })
+        );
+      }
+      
+      Promise.all(promises)
+        .then(() => console.log(`Item ${itemId} completely removed from cart`))
+        .catch((error) => console.error("Error removing item from cart:", error));
+    }
+  };
+
   const decreaseCartItem = (itemId) => {
     removefromCart(itemId);
   };
@@ -159,22 +251,28 @@ const ShopContextProvider = (props) => {
     addtoCart(itemId, size);
   };
 
+  const getTotalCartItems = () => {
+    return Object.values(cartItems).reduce((sum, item) => {
+      const quantity = typeof item === 'number' ? item : (item?.quantity || 0);
+      return sum + quantity;
+    }, 0);
+  };
+
   const getTotalCartAmount = () => {
     return Object.entries(cartItems).reduce((total, [itemId, item]) => {
-      const quantity = item?.quantity || 0;
+      const quantity = typeof item === 'number' ? item : (item?.quantity || 0);
       const product = all_product.find((p) => p.id.toString() === itemId);
       return product ? total + (product.new_price * quantity) : total;
     }, 0);
   };
 
-  const getTotalCartItems = () => {
-    return Object.values(cartItems).reduce((sum, item) => sum + (item?.quantity || 0), 0);
-  };
-
   const addtoFavourite = (itemId, size) => {
     setFavouriteItems((prev) => ({
       ...prev,
-      [itemId]: { quantity: (prev[itemId]?.quantity || 0) + 1, size },
+      [itemId]: { 
+        quantity: (prev[itemId]?.quantity || 0) + 1, 
+        size: size || prev[itemId]?.size || 'N/A' 
+      },
     }));
     const authToken = localStorage.getItem("auth-token");
     if (authToken) {
@@ -185,7 +283,7 @@ const ShopContextProvider = (props) => {
           "auth-token": authToken,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ itemId, size }),
+        body: JSON.stringify({ itemId: itemId.toString(), size }),
       })
         .then((response) => response.json())
         .then((data) => console.log("Added to Favourite:", data))
@@ -197,8 +295,14 @@ const ShopContextProvider = (props) => {
     setFavouriteItems((prev) => {
       if (!prev[itemId] || prev[itemId].quantity <= 0) return prev;
       const updatedFavourite = { ...prev };
-      updatedFavourite[itemId] = { ...updatedFavourite[itemId], quantity: updatedFavourite[itemId].quantity - 1 };
-      if (updatedFavourite[itemId].quantity === 0) delete updatedFavourite[itemId];
+      if (prev[itemId].quantity === 1) {
+        delete updatedFavourite[itemId];
+      } else {
+        updatedFavourite[itemId] = { 
+          ...updatedFavourite[itemId], 
+          quantity: updatedFavourite[itemId].quantity - 1 
+        };
+      }
       return updatedFavourite;
     });
     const authToken = localStorage.getItem("auth-token");
@@ -210,7 +314,7 @@ const ShopContextProvider = (props) => {
           "auth-token": authToken,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ itemId }),
+        body: JSON.stringify({ itemId: itemId.toString() }),
       })
         .then((response) => response.json())
         .then((data) => console.log("Removed from Favourite:", data))
@@ -218,10 +322,47 @@ const ShopContextProvider = (props) => {
     }
   };
 
+  // New function to completely remove an item from favorites
+  const removeItemFromFavourite = (itemId) => {
+    setFavouriteItems((prev) => {
+      const updatedFavourite = { ...prev };
+      delete updatedFavourite[itemId];
+      return updatedFavourite;
+    });
+    
+    const authToken = localStorage.getItem("auth-token");
+    if (authToken) {
+      // Make multiple API calls to completely remove the item
+      const quantity = favouriteItems[itemId]?.quantity || 0;
+      const promises = [];
+      
+      for (let i = 0; i < quantity; i++) {
+        promises.push(
+          fetch("http://localhost:5000/RemoveFavourite", {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              "auth-token": authToken,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ itemId: itemId.toString() }),
+          })
+        );
+      }
+      
+      Promise.all(promises)
+        .then(() => console.log(`Item ${itemId} completely removed from favourites`))
+        .catch((error) => console.error("Error removing item from favourites:", error));
+    }
+  };
+
   const increaseFavouriteItem = (itemId) => {
     setFavouriteItems((prev) => ({
       ...prev,
-      [itemId]: { quantity: (prev[itemId]?.quantity || 0) + 1, size: prev[itemId]?.size },
+      [itemId]: { 
+        quantity: (prev[itemId]?.quantity || 0) + 1, 
+        size: prev[itemId]?.size || 'N/A' 
+      },
     }));
     const authToken = localStorage.getItem("auth-token");
     if (authToken) {
@@ -232,7 +373,7 @@ const ShopContextProvider = (props) => {
           "auth-token": authToken,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ itemId, size: favouriteItems[itemId]?.size }),
+        body: JSON.stringify({ itemId, size: favouriteItems[itemId]?.size || 'N/A' }),
       })
         .then((response) => response.json())
         .then((data) => console.log("Favourite updated:", data))
@@ -260,55 +401,41 @@ const ShopContextProvider = (props) => {
     }, 0);
   };
 
-  const clearCart = async () => {
+  const clearCart = () => {
     setCartItems(getDefaultCart());
     const authToken = localStorage.getItem("auth-token");
     if (authToken) {
-      try {
-        const response = await fetch("http://localhost:5000/clearcart", {
-          method: "POST",
-          headers: {
-            Accept: "application/json",
-            "auth-token": authToken,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({}),
-        });
-        
-        if (response.ok) {
-          console.log("Cart cleared successfully");
-        } else {
-          console.error("Failed to clear cart");
-        }
-      } catch (error) {
-        console.error("Error clearing cart:", error);
-      }
+      fetch("http://localhost:5000/clearcart", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "auth-token": authToken,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      })
+        .then((response) => response.json())
+        .then((data) => console.log("Cart cleared:", data))
+        .catch((error) => console.error("Error clearing cart:", error));
     }
   };
 
-  const clearFavourite = async () => {
+  const clearFavourite = () => {
     setFavouriteItems(getDefaultFavourite());
     const authToken = localStorage.getItem("auth-token");
     if (authToken) {
-      try {
-        const response = await fetch("http://localhost:5000/clearfavourite", {
-          method: "POST",
-          headers: {
-            Accept: "application/json",
-            "auth-token": authToken,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({}),
-        });
-        
-        if (response.ok) {
-          console.log("Favourites cleared successfully");
-        } else {
-          console.error("Failed to clear favourites");
-        }
-      } catch (error) {
-        console.error("Error clearing favourites:", error);
-      }
+      fetch("http://localhost:5000/clearfavourite", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "auth-token": authToken,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      })
+        .then((response) => response.json())
+        .then((data) => console.log("Favourites cleared:", data))
+        .catch((error) => console.error("Error clearing favourites:", error));
     }
   };
 
@@ -318,8 +445,10 @@ const ShopContextProvider = (props) => {
     favouriteItems,
     addtoCart,
     removefromCart,
+    removeItemFromCart,
     addtoFavourite,
     removefromFavourite,
+    removeItemFromFavourite,
     getTotalCartAmount,
     getTotalCartItems,
     getTotalFavouriteItems,
@@ -331,9 +460,13 @@ const ShopContextProvider = (props) => {
     clearCart,
     clearFavourite,
     fetchAllProducts,
+    refreshProduct,
     userName,
     setUserName,
     fetchUserName,
+    resetState,
+    initializeUserData,
+    isLoading
   };
 
   return (

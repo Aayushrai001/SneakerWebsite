@@ -1,9 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useEffect, useState, useContext } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import './PaymentSuccess.css';
+import { ShopContext } from '../../Context/ShopContext';
+import toast from 'react-hot-toast';
 
 const PaymentSuccess = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { removeItemFromCart, removeItemFromFavourite, all_product } = useContext(ShopContext);
   const [transactionId, setTransactionId] = useState('');
   const [orderDetails, setOrderDetails] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,10 +23,55 @@ const PaymentSuccess = () => {
     if (transactionIdFromQuery) {
       fetchOrderDetails(transactionIdFromQuery);
     } else {
-      setError('No transaction ID provided');
-      setLoading(false);
+      // Try to get order details from localStorage if no transaction ID
+      const savedOrderDetails = localStorage.getItem('lastOrder');
+      if (savedOrderDetails) {
+        try {
+          const parsedOrderDetails = JSON.parse(savedOrderDetails);
+          setOrderDetails(parsedOrderDetails);
+          setLoading(false);
+          
+          // Remove items from cart and favorites
+          removePurchasedItems(parsedOrderDetails);
+        } catch (err) {
+          console.error('Error parsing saved order details:', err);
+          setError('Failed to load order details');
+          setLoading(false);
+        }
+      } else {
+        setError('No transaction ID provided and no saved order details found');
+        setLoading(false);
+      }
     }
   }, [location]);
+
+  const removePurchasedItems = (items) => {
+    if (!items || !Array.isArray(items)) return;
+    
+    console.log('Removing purchased items:', items);
+    
+    items.forEach(item => {
+      if (item.productId) {
+        // Find the product ID in the all_product array
+        const product = all_product.find(p => p._id === item.productId);
+        if (product) {
+          console.log(`Removing product ${product.id} from cart and favorites`);
+          // Remove from cart
+          removeItemFromCart(product.id);
+          
+          // Remove from favorites
+          removeItemFromFavourite(product.id);
+        } else {
+          console.error(`Product with ID ${item.productId} not found in all_product`);
+        }
+      }
+    });
+    
+    // Clear the saved order details from localStorage
+    localStorage.removeItem('lastOrder');
+    
+    toast.success('Items have been removed from your cart and favorites');
+  };
 
   const fetchOrderDetails = async (transactionId) => {
     if (!transactionId) {
@@ -51,16 +100,37 @@ const PaymentSuccess = () => {
       console.log('Received order details:', data);
 
       if (data.success) {
-        setOrderDetails(data.orderDetails); // <-- updated to accept an array
+        setOrderDetails(data.orderDetails);
+        
+        // Remove items from cart and favorites
+        removePurchasedItems(data.orderDetails);
       } else {
         throw new Error(data.message || 'Failed to load order details');
       }
     } catch (err) {
       console.error('Error in fetchOrderDetails:', err);
       setError(err.message);
+      
+      // Fallback to localStorage if API call fails
+      const savedOrderDetails = localStorage.getItem('lastOrder');
+      if (savedOrderDetails) {
+        try {
+          const parsedOrderDetails = JSON.parse(savedOrderDetails);
+          setOrderDetails(parsedOrderDetails);
+          
+          // Remove items from cart and favorites
+          removePurchasedItems(parsedOrderDetails);
+        } catch (parseErr) {
+          console.error('Error parsing saved order details:', parseErr);
+        }
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const calculateTotalAmount = () => {
+    return orderDetails.reduce((total, item) => total + (item.totalPrice || 0), 0);
   };
 
   return (
@@ -100,6 +170,9 @@ const PaymentSuccess = () => {
               </div>
             </div>
           ))}
+          <div className="order-total">
+            <h3>Total Order Amount: Rs. {calculateTotalAmount()}</h3>
+          </div>
         </div>
       )}
 

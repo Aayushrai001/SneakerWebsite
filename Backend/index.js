@@ -329,7 +329,6 @@ app.post('/signup', async (req, res) => {
     const cartData = {};
     for (let i = 0; i < 300; i++) cartData[i] = 0;
     const favoriteData = {};
-    for (let i = 0; i < 300; i++) favoriteData[i] = 0;
 
     // Create user
     const newUser = new Users({
@@ -521,24 +520,51 @@ app.get('/popular', async (req, res) => {
 });
 
 app.post('/AddToCart', fetchUser, async (req, res) => {
-  let userData = await Users.findOne({ _id: req.user.id });
-  userData.cartData[req.body.itemId] += 1;
-  await Users.findOneAndUpdate({ _id: req.user.id }, { cartData: userData.cartData });
-  res.send("Added");
-});
-
-app.post('/RemoveCart', async (req, res) => {
   try {
     let userData = await Users.findOne({ _id: req.user.id });
-    if (userData.cartData[req.body.itemId] > 0) {
-      userData.cartData[req.body.itemId] -= 1;
-      if (userData.cartData[req.body.itemId] === 0) delete userData.cartData[req.body.itemId];
-      await Users.findOneAndUpdate({ _id: req.user.id }, { cartData: userData.cartData });
-      return res.json({ message: 'Item removed', cartData: userData.cartData });
+    const { itemId, size } = req.body;
+    
+    // Initialize the cart item if it doesn't exist
+    if (!userData.cartData[itemId]) {
+      userData.cartData[itemId] = { quantity: 0, size: 'N/A' };
     }
+    
+    // Update the quantity and size
+    userData.cartData[itemId].quantity += 1;
+    if (size) {
+      userData.cartData[itemId].size = size;
+    }
+    
+    await Users.findOneAndUpdate({ _id: req.user.id }, { cartData: userData.cartData });
+    res.json({ message: 'Added to Cart', cartData: userData.cartData });
+  } catch (error) {
+    console.error("Error adding to cart:", error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
 
+app.post('/RemoveCart', fetchUser, async (req, res) => {
+  try {
+    let userData = await Users.findOne({ _id: req.user.id });
+    const { itemId } = req.body;
+    
+    // Check if the item exists and has quantity > 0
+    if (userData.cartData[itemId] && userData.cartData[itemId].quantity > 0) {
+      // Decrease quantity
+      userData.cartData[itemId].quantity -= 1;
+      
+      // Remove the item if quantity becomes 0
+      if (userData.cartData[itemId].quantity === 0) {
+        delete userData.cartData[itemId];
+      }
+      
+      await Users.findOneAndUpdate({ _id: req.user.id }, { cartData: userData.cartData });
+      return res.json({ message: 'Item removed from cart', cartData: userData.cartData });
+    }
+    
     res.status(400).json({ error: 'Item not found in cart or already at 0' });
   } catch (error) {
+    console.error("Error removing from cart:", error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
@@ -551,26 +577,70 @@ app.post('/getcart', fetchUser, async (req, res) => {
 app.post('/AddToFavourite', fetchUser, async (req, res) => {
   try {
     let userData = await Users.findOne({ _id: req.user.id });
-    userData.favoriteData[req.body.itemId] += 1;
-    await Users.findOneAndUpdate({ _id: req.user.id }, { favoriteData: userData.favoriteData });
-    res.json({ message: 'Added to Favourite', favoriteData: userData.favoriteData });
+    const { itemId, size } = req.body;
+    
+    // Initialize favoriteData if it doesn't exist
+    if (!userData.favoriteData) {
+      userData.favoriteData = {};
+    }
+    
+    // Initialize the favorite item if it doesn't exist
+    if (!userData.favoriteData[itemId]) {
+      userData.favoriteData[itemId] = { quantity: 0, size: size || 'N/A' };
+    }
+    
+    // Update the quantity and size
+    userData.favoriteData[itemId].quantity += 1;
+    if (size) {
+      userData.favoriteData[itemId].size = size;
+    }
+    
+    await Users.findOneAndUpdate(
+      { _id: req.user.id }, 
+      { $set: { favoriteData: userData.favoriteData } },
+      { new: true }
+    );
+    
+    res.json({ success: true, message: 'Added to Favourite', favoriteData: userData.favoriteData });
   } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error("Error adding to favourite:", error);
+    res.status(500).json({ success: false, error: 'Internal Server Error' });
   }
 });
 
 app.post('/RemoveFavourite', fetchUser, async (req, res) => {
   try {
     let userData = await Users.findOne({ _id: req.user.id });
-    if (userData.favoriteData[req.body.itemId] > 0) {
-      userData.favoriteData[req.body.itemId] -= 1;
-      if (userData.favoriteData[req.body.itemId] === 0) delete userData.favoriteData[req.body.itemId];
-      await Users.findOneAndUpdate({ _id: req.user.id }, { favoriteData: userData.favoriteData });
-      return res.json({ message: 'Item removed from Favourite', favoriteData: userData.favoriteData });
+    const { itemId } = req.body;
+    
+    // Initialize favoriteData if it doesn't exist
+    if (!userData.favoriteData) {
+      userData.favoriteData = {};
     }
-    res.status(400).json({ error: 'Item not found in favourites or already at 0' });
+    
+    // Check if the item exists and has quantity > 0
+    if (userData.favoriteData[itemId] && userData.favoriteData[itemId].quantity > 0) {
+      // Decrease quantity
+      userData.favoriteData[itemId].quantity -= 1;
+      
+      // Remove the item if quantity becomes 0
+      if (userData.favoriteData[itemId].quantity === 0) {
+        delete userData.favoriteData[itemId];
+      }
+      
+      await Users.findOneAndUpdate(
+        { _id: req.user.id }, 
+        { $set: { favoriteData: userData.favoriteData } },
+        { new: true }
+      );
+      
+      return res.json({ success: true, message: 'Item removed from Favourite', favoriteData: userData.favoriteData });
+    }
+    
+    res.status(400).json({ success: false, error: 'Item not found in favourites or already at 0' });
   } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error("Error removing from favourite:", error);
+    res.status(500).json({ success: false, error: 'Internal Server Error' });
   }
 });
 
@@ -1664,25 +1734,29 @@ app.get('/admin/transactions', async (req, res) => {
 // Get overview statistics
 app.get('/admin/overview', async (req, res) => {
   try {
+    // Get total products
     const totalProducts = await Product.countDocuments();
 
+    // Get total earnings (sum of all completed payments)
     const totalEarnings = await Payment.aggregate([
       { $match: { status: 'success' } },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: { $divide: ['$amount', 100] } }
-        }
-      }
+      { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
+    // Get total orders
     const totalOrders = await PurchasedItem.countDocuments();
 
-    // Get total users
-    const totalUsers = await Users.countDocuments();
+    // Get new users (users created in the last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const newUsers = await Users.countDocuments({
+      date: { $gte: thirtyDaysAgo }
+    });
 
+    // Get pending orders count
     const pendingOrders = await PurchasedItem.countDocuments({ delivery: 'pending' });
 
+    // Get monthly sales data
     const monthlySales = await Payment.aggregate([
       { $match: { status: 'success' } },
       {
@@ -1698,6 +1772,7 @@ app.get('/admin/overview', async (req, res) => {
       { $limit: 5 }
     ]);
 
+    // Get yearly sales trend
     const yearlySales = await Payment.aggregate([
       { $match: { status: 'success' } },
       {
@@ -1709,6 +1784,7 @@ app.get('/admin/overview', async (req, res) => {
       { $sort: { '_id': 1 } }
     ]);
 
+    // Get top selling products with proper population
     const topProducts = await PurchasedItem.aggregate([
       {
         $group: {
@@ -1720,19 +1796,23 @@ app.get('/admin/overview', async (req, res) => {
       { $limit: 5 }
     ]);
 
+    // Get product details for top products
     const productIds = topProducts.map(p => p._id);
     const products = await Product.find({ _id: { $in: productIds } }).select('name');
 
+    // Create a map of product IDs to names
     const productMap = products.reduce((acc, product) => {
       acc[product._id.toString()] = product.name;
       return acc;
     }, {});
 
+    // Format top products with names
     const formattedTopProducts = topProducts.map(product => ({
       name: productMap[product._id.toString()] || 'Unknown Product',
       value: product.count
     }));
 
+    // Get recent transactions
     const recentTransactions = await Payment.find({ status: 'success' })
       .populate('user', 'name email')
       .populate({
@@ -1746,6 +1826,7 @@ app.get('/admin/overview', async (req, res) => {
       .limit(5)
       .lean();
 
+    // Format recent transactions
     const formattedRecentTransactions = recentTransactions.map(transaction => ({
       id: transaction._id,
       user: transaction.user?.name || 'Unknown User',
@@ -1760,7 +1841,7 @@ app.get('/admin/overview', async (req, res) => {
         totalProducts,
         totalEarnings: totalEarnings[0]?.total || 0,
         totalOrders,
-        totalUsers,
+        newUsers,
         pendingOrders,
         monthlySales: monthlySales.map(sale => ({
           name: new Date(sale._id.year, sale._id.month - 1).toLocaleString('default', { month: 'short' }),

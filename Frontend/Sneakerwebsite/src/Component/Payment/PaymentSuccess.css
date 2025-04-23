@@ -1,147 +1,151 @@
 .payment-success {
-  max-width: 1100px;
-  margin: 2rem auto;
-  padding: 1.5rem;
-  background-color: #ffffff;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  max-width: 800px;
+  margin: 100px auto;
+  padding: 40px;
+  background-color: white;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  text-align: center;
 }
 
 .payment-success h1 {
-  color: #28a745;
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
+  font-size: 36px;
+  color: #333;
+  margin-bottom: 20px;
 }
 
 .payment-success p {
-  font-size: 1rem;
-  margin: 0.5rem 0;
-  color: #333;
+  font-size: 18px;
+  color: #555;
+  margin-bottom: 15px;
 }
 
 .payment-success h2 {
-  margin-top: 2rem;
-  font-size: 1.5rem;
-  color: #555;
-  border-bottom: 2px solid #eaeaea;
-  padding-bottom: 0.5rem;
-}
-
-.error {
-  color: #d9534f;
-  font-weight: bold;
-  margin-top: 1rem;
+  font-size: 28px;
+  color: #333;
+  margin: 30px 0 20px;
 }
 
 .order-details-container {
-  margin-top: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  margin: 30px 0;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  background-color: #f9f9f9;
+  padding: 20px;
 }
 
 .order-details {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
-  background-color: #f9f9f9;
-  border-radius: 10px;
-  padding: 1rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-  flex-wrap: wrap;
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.order-details:last-child {
+  border-bottom: none;
 }
 
 .product-image-container {
-  flex-shrink: 0;
-  width: 120px;
-  height: 120px;
-  overflow: hidden;
-  border-radius: 10px;
-  background-color: #e0e0e0;
+  width: 100px;
+  height: 100px;
+  margin-right: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .product-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 10px;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }
 
 .no-image {
-  font-size: 0.9rem;
-  color: #666;
-  text-align: center;
-  padding: 0.5rem;
+  width: 100%;
+  height: 100%;
+  background-color: #eee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 14px;
 }
 
 .product-details {
-  flex-grow: 1;
-  min-width: 200px;
+  flex: 1;
+  text-align: left;
 }
 
 .product-details p {
-  margin: 0.3rem 0;
-  font-size: 1rem;
+  margin: 5px 0;
+  font-size: 16px;
 }
 
-.Return{
+.order-total {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 2px solid #eee;
+  text-align: right;
+}
+
+.order-total h3 {
+  font-size: 24px;
+  color: #333;
+}
+
+.Return {
   display: inline-block;
-  margin-top: 2rem;
-  padding: 0.6rem 1.2rem;
-  background-color: #007bff;
-  color: #fff;
+  margin-top: 30px;
+  padding: 15px 30px;
+  background: #ff5a5a;
+  color: white;
   text-decoration: none;
-  border-radius: 8px;
-  transition: background-color 0.3s ease;
+  border-radius: 10px;
+  font-size: 18px;
+  font-weight: 600;
+  transition: all 0.3s ease;
 }
 
 .Return:hover {
-  background-color: #0056b3;
+  background: #e04e4e;
+  transform: scale(1.05);
 }
 
-/* Responsive Design */
+.error {
+  color: #ff5a5a;
+  font-weight: 500;
+  margin: 10px 0;
+}
+
 @media (max-width: 768px) {
-  .order-details {
-      flex-direction: column;
-      align-items: flex-start;
-  }
-
-  .product-image-container {
-      width: 100%;
-      height: auto;
-  }
-
-  .product-image {
-      width: 100%;
-      height: auto;
-  }
-
-  .product-details {
-      width: 100%;
-  }
-}
-
-@media (max-width: 480px) {
   .payment-success {
-      padding: 1rem;
+    margin: 50px 20px;
+    padding: 20px;
   }
-
+  
   .payment-success h1 {
-      font-size: 1.6rem;
+    font-size: 28px;
   }
-
+  
   .payment-success h2 {
-      font-size: 1.3rem;
+    font-size: 22px;
   }
-
-  .product-details p {
-      font-size: 0.95rem;
+  
+  .order-details {
+    flex-direction: column;
+    text-align: center;
   }
-
-  a {
-      padding: 0.5rem 1rem;
-      font-size: 0.95rem;
+  
+  .product-image-container {
+    margin: 0 auto 15px;
+  }
+  
+  .product-details {
+    text-align: center;
+  }
+  
+  .Return {
+    padding: 12px 25px;
+    font-size: 16px;
   }
 }

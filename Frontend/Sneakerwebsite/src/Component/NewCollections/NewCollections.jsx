@@ -21,8 +21,10 @@ const NewCollections = () => {
 
   return (
     <div className="new-collections">
-      <h1>NEW COLLECTIONS</h1>
-      <hr />
+      <div className="new-collections-header">
+        <h1>NEW COLLECTIONS</h1>
+        <hr />
+      </div>
       <div className="collections">
         {newCollection.map((item) => (
           <Item

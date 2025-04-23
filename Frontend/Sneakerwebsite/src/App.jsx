@@ -16,6 +16,7 @@ import kid_banner from './Component/assets/banner_kids.png';
 import UserPanel from './Component/UserPanel/UserPanel';
 import PaymentSuccess from './Component/Payment/PaymentSuccess';
 import PaymentFailure from './Component/Payment/PaymentFailure';
+import SearchProduct from './Pages/SearchProduct';
 
 function App() {
   const [count, setCount] = useState(0);
@@ -40,6 +41,7 @@ function App() {
         <Route path='/UserPanel' element={<UserPanel />} />
         <Route path="/payment-success" element={<PaymentSuccess />} />
         <Route path="/payment-failure" element={<PaymentFailure />} />
+        <Route path="/search" element={<SearchProduct />} />
       </Routes>
       {location.pathname !== '/UserPanel' && <Footer />}
     </div>

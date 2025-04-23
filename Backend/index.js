@@ -502,7 +502,7 @@ app.get('/popular', async (req, res) => {
     const BASE_URL = process.env.BACKEND_URI || 'http://localhost:5000';
     const products = await Product.aggregate([
       { $match: { category: { $in: ['men', 'women', 'kid'] } } },
-      { $sample: { size: 4 } },
+      { $sample: { size: 8 } },
     ]);
 
     const productsWithFullUrls = products.map((product) => ({

@@ -1,5 +1,5 @@
 import React, { useContext, useRef, useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ShopContext } from '../../Context/ShopContext';
 import './Navbar.css';
 import logo from '../assets/logo.png';
@@ -15,6 +15,7 @@ const Navbar = () => {
   const menuRef = useRef();
   const { getTotalCartItems, getTotalFavouriteItems, userName, resetState, isLoading, initializeUserData } = useContext(ShopContext);
   const location = useLocation();
+  const navigate = useNavigate();
 
   const isAuthenticated = localStorage.getItem('auth-token');
 
@@ -64,8 +65,10 @@ const Navbar = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    // Implement search functionality here
-    console.log('Searching for:', searchQuery);
+    if (searchQuery.trim()) {
+      // Navigate to search page with the query parameter
+      navigate(`/search?query=${encodeURIComponent(searchQuery.trim())}`);
+    }
   };
 
   return (
@@ -88,7 +91,6 @@ const Navbar = () => {
           </button>
         </form>
       </div>
-
 
       <ul ref={menuRef} className="nav-menu">
         {menuItems.map(({ name, path }) => (

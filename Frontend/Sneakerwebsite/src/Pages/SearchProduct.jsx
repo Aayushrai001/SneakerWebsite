@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import './CSS/SearchProduct.css';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import Item from '../Component/Item/Item';
 import { FaFilter, FaSearch } from 'react-icons/fa';
 import { MdClose } from 'react-icons/md';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
+import logo from '../Component/assets/logo.png';
 
 const SearchProduct = () => {
   const location = useLocation();
@@ -29,19 +30,12 @@ const SearchProduct = () => {
       try {
         const response = await fetch('http://localhost:5000/allproducts');
         const data = await response.json();
-        setProducts(data);
-        if (data.length > 0) {
-          toast.success('Products loaded successfully!', {
-            duration: 2000,
-            position: 'top-left',
-          });
-        }
+        // Randomize the order of products
+        const randomizedProducts = data.sort(() => Math.random() - 0.5);
+        setProducts(randomizedProducts);
       } catch (error) {
         console.error('Error fetching products:', error);
-        toast.error('Failed to load products. Please try again later.', {
-          duration: 3000,
-          position: 'top-left',
-        });
+        toast.error('Failed to load products. Please try again later.');
       }
     };
     
@@ -53,7 +47,7 @@ const SearchProduct = () => {
   
   // Filter products based on search query and filters
   useEffect(() => {
-    let filtered = products;
+    let filtered = [...products];
     
     // Apply search query filter
     if (searchQuery) {
@@ -63,14 +57,14 @@ const SearchProduct = () => {
       );
     }
     
-    // Apply other filters
-    if (filters.brand) {
+    // Apply other filters - only filter if a non-empty value is selected
+    if (filters.brand && filters.brand !== "") {
       filtered = filtered.filter(product => product.brand === filters.brand);
     }
-    if (filters.category) {
-      filtered = filtered.filter(product => product.category === filters.category);
+    if (filters.gender && filters.gender !== "") {
+      filtered = filtered.filter(product => product.category === filters.gender);
     }
-    if (filters.priceRange) {
+    if (filters.priceRange && filters.priceRange !== "") {
       const [min, max] = filters.priceRange.split('-').map(Number);
       filtered = filtered.filter(product => 
         product.new_price >= min && product.new_price <= max
@@ -96,10 +90,7 @@ const SearchProduct = () => {
     }));
     
     if (value) {
-      toast.success(`${name.charAt(0).toUpperCase() + name.slice(1)} filter applied`, {
-        duration: 1500,
-        position: 'top-left',
-      });
+      toast.success(`${name.charAt(0).toUpperCase() + name.slice(1)} filter applied`);
     }
   };
   
@@ -110,35 +101,40 @@ const SearchProduct = () => {
       priceRange: '',
       gender: ''
     });
-    toast.success('All filters cleared!', {
-      duration: 1500,
-      position: 'top-left',
-    });
+    toast.success('All filters cleared!');
   };
   
   // Handle new search
   const handleNewSearch = (e) => {
     e.preventDefault();
     const newQuery = e.target.search.value.trim();
+    
     if (newQuery) {
       navigate(`/search?query=${encodeURIComponent(newQuery)}`);
-      toast.success(`Searching for "${newQuery}"`, {
-        duration: 1500,
-        position: 'top-left',
-      });
     } else {
-      toast.error('Please enter a search term', {
-        duration: 1500,
-        position: 'top-left',
-      });
+      // If search is cleared, navigate to search without a query parameter
+      navigate('/search');
+    }
+  };
+  
+  // Handle search input change
+  const handleSearchChange = (e) => {
+    const newQuery = e.target.value.trim();
+    if (!newQuery) {
+      // If search field is cleared, update URL without query parameter
+      navigate('/search');
     }
   };
   
   return (
     <div className="search-product-container">
-      <Toaster />
       <div className="search-product-header">
-        <h1>Search Results for "{searchQuery}"</h1>
+        <div className="search-logo">
+          <Link to="/">
+            <img src={logo} alt="Sneaker.NP Logo" />
+          </Link>
+        </div>
+        <h1>{searchQuery ? `Search Results for "${searchQuery}"` : 'All Products'}</h1>
         <p>{filteredProducts.length} products found</p>
         
         <form className="search-form" onSubmit={handleNewSearch}>
@@ -147,6 +143,7 @@ const SearchProduct = () => {
             name="search" 
             placeholder="Search for products..." 
             defaultValue={searchQuery}
+            onChange={handleSearchChange}
           />
           <button type="submit">
             <FaSearch />
@@ -167,9 +164,9 @@ const SearchProduct = () => {
             <h3>Gender</h3>
             <select name="gender" value={filters.gender} onChange={handleFilterChange}>
               <option value="">All</option>
-              <option value="mens">Men</option>
-              <option value="womens">Women</option>
-              <option value="kids">Kids</option>
+              <option value="men">Men</option>
+              <option value="women">Women</option>
+              <option value="kid">Kids</option>
             </select>
           </div>
           
@@ -191,7 +188,7 @@ const SearchProduct = () => {
               <option value="5000-8000">Rs. 5,000 - Rs. 8,000</option>
               <option value="8000-10000">Rs. 8,000 - Rs. 10,000</option>
               <option value="10000-20000">Rs. 10,000 - Rs. 20,000</option>
-              <option value="0000-999999">Over Rs. 10,000</option>
+              <option value="20000-999999">Over Rs. 20,000</option>
             </select>
           </div>
           

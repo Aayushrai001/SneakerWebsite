@@ -14,20 +14,31 @@
 .nav-logo {
     display: flex;
     align-items: center;
-    gap: 12px;
-    min-width: 180px;
+}
+
+.nav-logo a {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: inherit;
+    gap: 10px;
+    transition: transform 0.3s ease;
 }
 
 .nav-logo img {
     height: 35px;
     width: auto;
+    transition: transform 0.3s ease;
 }
 
 .nav-logo p {
     font-size: 22px;
     font-weight: 600;
     color: #1a1a1a;
+    margin: 0;
+    transition: color 0.3s ease;
 }
+
 
 /* Search Section */
 .nav-search {

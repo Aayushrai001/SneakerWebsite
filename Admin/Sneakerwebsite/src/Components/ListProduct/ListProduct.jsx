@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import ReactDOM from 'react-dom';
 import './ListProduct.css';
 import cross_icon from '../../assets/cross_icon.png';
 import filter_icon from '../../assets/filter.png';
@@ -7,10 +8,11 @@ const ListProduct = () => {
   const [allProducts, setAllProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
-  const [visibleProductsCount, setVisibleProductsCount] = useState(12);
   const [error, setError] = useState(null);
   const [expandedProductId, setExpandedProductId] = useState(null);
   const [restockData, setRestockData] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const productsPerPage = 12;
 
   // Fisher-Yates shuffle to randomize array
   const shuffleArray = (array) => {
@@ -159,11 +161,113 @@ const ListProduct = () => {
       product.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-  const toggleShowMore = () => {
-    setVisibleProductsCount(prev => prev === 12 ? prev + 9 : 12);
+  // Calculate pagination values
+  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+  const indexOfLastProduct = currentPage * productsPerPage;
+  const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
+  const currentProducts = filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct);
+
+  const paginate = (pageNumber) => {
+    setCurrentPage(pageNumber);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Reset to first page when search or filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterCategory]);
+
   const categories = ["men", "women", "kid"];
+
+  const ProductDetails = ({ product, onClose }) => {
+    if (!product) return null;
+
+    return ReactDOM.createPortal(
+      <div className="listproduct-details-overlay">
+        <div className="listproduct-details">
+          <div className="listproduct-details-cross" onClick={onClose}>
+            <img src={cross_icon} alt="Close" />
+          </div>
+          <p><strong>Name:</strong> {product.name}</p>
+          <p><strong>Price:</strong> Rs.{product.new_price}</p>
+          <p><strong>Category:</strong> {product.category}</p>
+          <p><strong>Brand:</strong> {product.brand}</p>
+          <p><strong>Description:</strong> {product.description}</p>
+          <div className="listproduct-sizes">
+            <strong>Sizes:</strong>
+            <ul>
+              {product.sizes.map((size, index) => (
+                <li key={index} className="size-item">
+                  {size.size}: {size.quantity} available
+                  <button
+                    className="remove-size-btn"
+                    onClick={() => removeSize(product.id, size.size)}
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="listproduct-actions">
+            <button
+              className="restock-btn"
+              onClick={() => handleAddSizeInput(product.id)}
+            >
+              Restock
+            </button>
+            <button
+              className="remove-btn"
+              onClick={() => removeProduct(product.id)}
+            >
+              Remove Product
+            </button>
+          </div>
+          {restockData[product.id]?.length > 0 && (
+            <div className="restock-form">
+              <h3>Restock Product</h3>
+              {restockData[product.id].map((sizeInput, index) => (
+                <div key={index} className="restock-input">
+                  <div className="input-group">
+                    <input
+                      type="text"
+                      placeholder="Size (e.g., 8)"
+                      value={sizeInput.size}
+                      onChange={(e) =>
+                        handleSizeChange(product.id, index, "size", e.target.value)
+                      }
+                    />
+                    <input
+                      type="number"
+                      placeholder="Quantity"
+                      value={sizeInput.quantity}
+                      onChange={(e) =>
+                        handleSizeChange(product.id, index, "quantity", e.target.value)
+                      }
+                      min="0"
+                    />
+                  </div>
+                  <button
+                    className="remove-restock-input-btn"
+                    onClick={() => handleRemoveSizeInput(product.id, index)}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button
+                className="submit-restock-btn"
+                onClick={() => handleRestock(product.id)}
+              >
+                Submit Restock
+              </button>
+            </div>
+          )}
+        </div>
+      </div>,
+      document.body
+    );
+  };
 
   return (
     <div className='list-product'>
@@ -194,104 +298,53 @@ const ListProduct = () => {
       </div>
       {error && <p className="error-message">{error}</p>}
       <div className="listproduct-allproducts">
-        {filteredProducts.length > 0 ? (
-          filteredProducts.slice(0, visibleProductsCount).map((product) => (
+        {currentProducts.length > 0 ? (
+          currentProducts.map((product) => (
             <div key={product.id} className="listproduct-item">
               <div className="listproduct-card" onClick={() => toggleProductDetails(product.id)}>
                 <img src={product.image} alt={product.name} className="listproduct-product-icon" />
                 <p className="listproduct-product-name">{product.name}</p>
               </div>
-              {expandedProductId === product.id && (
-                <div className="listproduct-details">
-                  <div className="listproduct-details-cross" onClick={() => toggleProductDetails(product.id)}>
-                    <img src={cross_icon} alt="Close" />
-                  </div>
-                  <p><strong>Price:</strong> Rs.{product.new_price}</p>
-                  <p><strong>Category:</strong> {product.category}</p>
-                  <p><strong>Brand:</strong> {product.brand}</p>
-                  <p><strong>Description:</strong> {product.description}</p>
-                  <div className="listproduct-sizes">
-                    <strong>Sizes:</strong>
-                    <ul>
-                      {product.sizes.map((size, index) => (
-                        <li key={index} className="size-item">
-                          {size.size}: {size.quantity} available
-                          <button
-                            className="remove-size-btn"
-                            onClick={() => removeSize(product.id, size.size)}
-                          >
-                            Remove
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div className="listproduct-actions">
-                    <button
-                      className="restock-btn"
-                      onClick={() => handleAddSizeInput(product.id)}
-                    >
-                      Restock
-                    </button>
-                    <button
-                      className="remove-btn"
-                      onClick={() => removeProduct(product.id)}
-                    >
-                      Remove Product
-                    </button>
-                  </div>
-                  {restockData[product.id]?.length > 0 && (
-                    <div className="restock-form">
-                      <h3>Restock Product</h3>
-                      {restockData[product.id].map((sizeInput, index) => (
-                        <div key={index} className="restock-input">
-                          <div className="input-group">
-                            <input
-                              type="text"
-                              placeholder="Size (e.g., 8)"
-                              value={sizeInput.size}
-                              onChange={(e) =>
-                                handleSizeChange(product.id, index, "size", e.target.value)
-                              }
-                            />
-                            <input
-                              type="number"
-                              placeholder="Quantity"
-                              value={sizeInput.quantity}
-                              onChange={(e) =>
-                                handleSizeChange(product.id, index, "quantity", e.target.value)
-                              }
-                              min="0"
-                            />
-                          </div>
-                          <button
-                            className="remove-restock-input-btn"
-                            onClick={() => handleRemoveSizeInput(product.id, index)}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ))}
-                      <button
-                        className="submit-restock-btn"
-                        onClick={() => handleRestock(product.id)}
-                      >
-                        Submit Restock
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           ))
         ) : (
           <p className="no-products-message">No products found</p>
         )}
       </div>
-      {filteredProducts.length > 12 && (
-        <button onClick={toggleShowMore} className="see-more-btn">
-          {visibleProductsCount === 12 ? 'See More' : 'Show Less'}
-        </button>
+      {totalPages > 1 && (
+        <div className="pagination">
+          <button
+            className={`pagination-button ${currentPage === 1 ? 'disabled' : ''}`}
+            onClick={() => paginate(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </button>
+          <div className="pagination-numbers">
+            {[...Array(totalPages)].map((_, index) => (
+              <button
+                key={index + 1}
+                className={`pagination-number ${currentPage === index + 1 ? 'active' : ''}`}
+                onClick={() => paginate(index + 1)}
+              >
+                {index + 1}
+              </button>
+            ))}
+          </div>
+          <button
+            className={`pagination-button ${currentPage === totalPages ? 'disabled' : ''}`}
+            onClick={() => paginate(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </button>
+        </div>
+      )}
+      {expandedProductId && (
+        <ProductDetails
+          product={filteredProducts.find(p => p.id === expandedProductId)}
+          onClose={() => setExpandedProductId(null)}
+        />
       )}
     </div>
   );

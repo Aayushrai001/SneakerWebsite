@@ -1331,7 +1331,7 @@ app.get('/admin/orders', async (req, res) => {
     }
 
     const orders = await PurchasedItem.find(dateFilter)
-      .populate('user', 'name email')
+      .populate('user', 'name email address')
       .populate('product', 'name image')
       .skip(skip)
       .limit(limit)
@@ -1356,7 +1356,6 @@ app.get('/admin/orders', async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 });
-
 app.put('/admin/update-order-status', async (req, res) => {
   try {
     const { orderId, payment, delivery } = req.body;
@@ -1825,6 +1824,9 @@ app.get('/admin/overview', async (req, res) => {
     // Get total orders
     const totalOrders = await PurchasedItem.countDocuments();
 
+    // Get total users
+    const totalUsers = await Users.countDocuments();
+
     // Get new users (users created in the last 30 days)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -1920,6 +1922,7 @@ app.get('/admin/overview', async (req, res) => {
         totalProducts,
         totalEarnings: totalEarnings[0]?.total || 0,
         totalOrders,
+        totalUsers,
         newUsers,
         pendingOrders,
         monthlySales: monthlySales.map(sale => ({
@@ -1939,6 +1942,7 @@ app.get('/admin/overview', async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 });
+
 
 // Forgot password endpoint
 app.post('/forgot-password', async (req, res) => {

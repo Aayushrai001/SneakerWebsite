@@ -74,8 +74,10 @@ const Navbar = () => {
   return (
     <nav className="navbar">
       <div className="nav-logo">
-        <img src={logo} alt="Sneaker.NP Logo" />
-        <p>Sneaker.NP</p>
+        <Link to="/">
+          <img src={logo} alt="Sneaker.NP Logo" />
+          <p>Sneaker.NP</p>
+        </Link>
       </div>
 
       <div className="nav-search">

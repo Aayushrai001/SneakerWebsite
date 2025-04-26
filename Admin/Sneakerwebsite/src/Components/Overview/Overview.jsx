@@ -23,6 +23,7 @@ const Overview = () => {
     totalProducts: 0,
     totalEarnings: 0,
     totalOrders: 0,
+    totalUsers: 0,
     newUsers: 0,
     pendingOrders: 0,
     monthlySales: [],
@@ -101,7 +102,7 @@ const Overview = () => {
           </div>
           <div className="card-content">
             <h3>Users</h3>
-            <p>{overviewData.totalUsers}</p>
+            <p>{overviewData.totalUsers || 0}</p>
           </div>
         </div>
         <div className="card">
@@ -178,9 +179,11 @@ const Overview = () => {
                   <span className="transaction-product">{transaction.product}</span>
                 </div>
                 <div className="transaction-details">
-                  <span className="transaction-amount">Rs. {transaction.amount.toLocaleString()}</span>
+                  <span className="transaction-amount">
+                    Rs. {(transaction.amount || 0).toLocaleString()}
+                  </span>
                   <span className="transaction-date">
-                    {new Date(transaction.date).toLocaleDateString()}
+                    {transaction.date ? new Date(transaction.date).toLocaleDateString() : 'N/A'}
                   </span>
                 </div>
               </div>

@@ -3,9 +3,11 @@ import "./Popular.css";
 import Item from "../Item/Item";
 import Home_img from '../assets/Home2.png';
 import arrow from '../assets/arrow.png';
+import { useNavigate } from 'react-router-dom';
 
 const Popular = () => {
   const [popularProducts, setPopularProducts] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchPopular = async () => {
@@ -21,6 +23,10 @@ const Popular = () => {
     fetchPopular();
   }, []);
 
+  const handleShopNow = () => {
+    navigate('/search');
+  };
+
   return (
     <div className="popular-container">
       <div className="featured-banner">
@@ -35,10 +41,10 @@ const Popular = () => {
             </div>
             <div className="banner-description">
               <p>Discover our latest sneaker collection featuring premium designs,</p>
-              <p>unmatched comfort, and the hottest trends in footwear.</p>
+            <p>unmatched comfort, and the hottest trends in footwear.</p>
             </div>
             <div className="banner-cta">
-              <button className="banner-button">
+              <button className="banner-button" onClick={handleShopNow}>
                 Shop Now <img src={arrow} alt="Arrow" />
               </button>
             </div>

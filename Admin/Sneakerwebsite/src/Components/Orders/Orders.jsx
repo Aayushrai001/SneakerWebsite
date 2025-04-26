@@ -136,6 +136,7 @@ const Orders = () => {
               <tr>
                 <th>Order ID</th>
                 <th>Customer</th>
+                <th>Address</th>
                 <th>Product</th>
                 <th>Image</th>
                 <th>Quantity</th>
@@ -159,6 +160,9 @@ const Orders = () => {
                     ) : (
                       <span className="text-muted">User not found</span>
                     )}
+                  </td>
+                  <td className="address-cell">
+                    {order.user?.address || 'No address provided'}
                   </td>
                   <td>{order.product?.name || 'Product not found'}</td>
                   <td>

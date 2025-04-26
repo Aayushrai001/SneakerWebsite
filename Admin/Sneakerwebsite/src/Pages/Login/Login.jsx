@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Login.css';
 import { useNavigate } from 'react-router-dom';
 
@@ -9,19 +9,33 @@ const Login = () => {
   const [step, setStep] = useState('login'); // 'login' or 'otp'
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if user is already logged in
+    const token = localStorage.getItem('auth-token');
+    if (token) {
+      navigate('/admin/overview', { replace: true });
+    }
+  }, [navigate]);
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError('');
+    setMessage('');
   
     // Basic validation
     if (!email || !password) {
       setError('Please fill in all fields');
+      setIsLoading(false);
       return;
     }
   
     if (!/\S+@\S+\.\S+/.test(email)) {
       setError('Please enter a valid email');
+      setIsLoading(false);
       return;
     }
   
@@ -37,7 +51,7 @@ const Login = () => {
       console.log('Backend response:', data); // Debug response
       if (data.success) {
         setError('');
-        setMessage(data.message);
+        setMessage('OTP has been sent to your email');
         setStep('otp');
       } else {
         setError(data.message || 'Invalid email or password');
@@ -47,14 +61,20 @@ const Login = () => {
       setError('An error occurred. Please try again.');
       setMessage('');
       console.error('Login error:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError('');
+    setMessage('');
 
     if (!otp) {
       setError('Please enter the OTP');
+      setIsLoading(false);
       return;
     }
 
@@ -82,6 +102,8 @@ const Login = () => {
       setError('An error occurred. Please try again.');
       setMessage('');
       console.error('OTP verification error:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -100,6 +122,7 @@ const Login = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
                 autoComplete="email"
+                disabled={isLoading}
               />
             </div>
 
@@ -112,14 +135,19 @@ const Login = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
                 autoComplete="current-password"
+                disabled={isLoading}
               />
             </div>
 
             {error && <div className="error-message">{error}</div>}
             {message && <div className="success-message">{message}</div>}
 
-            <button type="submit" className="login-button">
-              Send OTP
+            <button 
+              type="submit" 
+              className="login-button"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Sending OTP...' : 'Send OTP'}
             </button>
 
             <div className="forgot-password">
@@ -136,14 +164,22 @@ const Login = () => {
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
                 placeholder="Enter the OTP sent to your email"
+                disabled={isLoading}
+                maxLength="6"
+                pattern="[0-9]*"
+                inputMode="numeric"
               />
             </div>
 
             {error && <div className="error-message">{error}</div>}
             {message && <div className="success-message">{message}</div>}
 
-            <button type="submit" className="login-button">
-              Verify OTP
+            <button 
+              type="submit" 
+              className="login-button"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Verifying...' : 'Verify OTP'}
             </button>
 
             <div className="back-to-login">
@@ -156,6 +192,7 @@ const Login = () => {
                   setOtp('');
                 }}
                 className="back-button"
+                disabled={isLoading}
               >
                 Back to Login
               </button>

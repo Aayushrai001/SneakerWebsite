@@ -46,7 +46,6 @@
   background-color: #ffffff;
   border: 1px solid #d1d5db;
   border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   z-index: 10;
   display: flex;
   flex-direction: column;
@@ -76,7 +75,6 @@
   overflow-x: auto;
   background-color: #ffffff;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .table {
@@ -141,33 +139,42 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 8px;
   margin-top: 20px;
+  gap: 10px;
 }
 
-.pagination-button {
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  background-color: #ffffff;
-  font-size: 14px;
-  color: #374151;
+.pagination button {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  background-color: white;
   cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.3s ease;
 }
 
-.pagination-button:hover:not(:disabled) {
-  background-color: #f3f4f6;
+.pagination button:hover:not(:disabled) {
+  background-color: #f0f0f0;
 }
 
-.pagination-button.active {
-  background-color: #3b82f6;
-  color: #ffffff;
-  border-color: #3b82f6;
-}
-
-.pagination-button:disabled {
-  color: #9ca3af;
+.pagination button:disabled {
   cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.pagination button.active {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.page-numbers {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.page-numbers span {
+  margin: 0 5px;
 }
 
 .loading {

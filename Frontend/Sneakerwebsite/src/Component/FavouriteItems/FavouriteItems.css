@@ -180,15 +180,18 @@
 .payment-button {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 15px;
-    padding: 15px 30px;
+    width: 320px;
+    height: 70px;
+    padding: 0;
     border: 2px solid #ddd;
     border-radius: 10px;
     background: white;
     cursor: pointer;
     transition: all 0.3s ease;
-    font-size: 18px;
-    font-weight: 500;
+    font-size: 22px;
+    font-weight: 600;
 }
 
 .payment-button.selected {
@@ -365,7 +368,18 @@
     }
 
     .checkout-container button {
-        padding: 8px;
-        font-size: 14px;
+        width: 320px;
+        height: 70px;
+        padding: 0;
+        margin-top: 10px;
+        border: none;
+        border-radius: 10px;
+        font-size: 22px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 }

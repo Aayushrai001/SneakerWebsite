@@ -205,21 +205,6 @@
   font-weight: 500;
 }
 
-/* Toast Customization */
-.Toastify__toast {
-  border-radius: 10px;
-  font-family: inherit;
-  font-size: 14px;
-}
-
-.Toastify__toast--success {
-  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-}
-
-.Toastify__toast--error {
-  background: linear-gradient(135deg, #ff4141 0%, #ff6b6b 100%);
-}
-
 /* Responsive Design */
 @media (max-width: 800px) {
   .loginsignup-container {

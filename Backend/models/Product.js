@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 
-const ProductSchema = new mongoose.Schema({
+const productSchema = new mongoose.Schema({
   id: { type: Number, required: true, unique: true }, // Auto-incremented ID
-  name: { type: String, required: true }, // Removed unique constraint
+  name: { type: String, required: true }, 
   image: { type: String, required: true },
   category: { type: String, required: true },
   brand: { type: String, required: true },
@@ -16,6 +16,12 @@ const ProductSchema = new mongoose.Schema({
       quantity: { type: Number, required: true, min: 0 },
     },
   ],
+  createdAt: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('Product', ProductSchema);
+// Create compound index for name and category
+productSchema.index({ name: 1, category: 1 }, { unique: true });
+
+const Product = mongoose.model('Product', productSchema);
+
+module.exports = Product;

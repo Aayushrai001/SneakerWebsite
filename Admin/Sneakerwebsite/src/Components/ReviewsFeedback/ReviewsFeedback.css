@@ -1,8 +1,10 @@
+/* ReviewsFeedback.css */
+
 .reviews-container {
-  max-width: 1200px;
-  margin: 60px auto;
   padding: 20px;
-  font-family: 'Arial', sans-serif;
+  max-width: 1200px;
+  margin-top: 60px;
+  font-family: Arial, sans-serif;
 }
 
 .header {
@@ -13,9 +15,8 @@
 }
 
 .header h2 {
-  font-size: 24px;
-  color: black;  
   margin: 0;
+  color: #333;
 }
 
 .filter-wrapper {
@@ -25,58 +26,49 @@
 .filter-button {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background-color: #ffffff;
-  border: 1px solid #d1d5db;
+  padding: 8px 12px;
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 14px;
-  color: #374151;
 }
 
-.filter-button:hover {
-  background-color: #f3f4f6;
+.filter-button svg {
+  margin-right: 8px;
 }
 
 .filter-dropdown {
   position: absolute;
   top: 100%;
   right: 0;
-  background-color: #ffffff;
-  border: 1px solid #d1d5db;
+  background-color: white;
+  border: 1px solid #ccc;
   border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  z-index: 10;
-  display: flex; /* Always use flex, visibility controlled by isFilterOpen */
-  flex-direction: column;
-  min-width: 120px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  width: 150px;
 }
 
 .filter-option {
-  padding: 8px 16px;
-  border: none;
-  background: none;
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
   text-align: left;
-  font-size: 14px;
-  color: #374151;
+  background-color: white;
+  border: none;
   cursor: pointer;
 }
 
 .filter-option:hover {
-  background-color: #f3f4f6;
+  background-color: #f0f0f0;
 }
 
 .filter-option.active {
-  background-color: #e5e7eb;
-  font-weight: 600;
+  background-color: #e0e0e0;
 }
 
 .table-container {
   overflow-x: auto;
-  background-color: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .table {
@@ -84,233 +76,238 @@
   border-collapse: collapse;
 }
 
-.table th,
-.table td {
-  padding: 12px 16px;
+.table th, .table td {
+  padding: 12px;
   text-align: left;
+  border-bottom: 1px solid #ddd;
 }
 
 .table th {
-  background-color: white;
-  font-weight: 600;
-  color: black;
-  font-size: 14px;
-}
-
-.table td {
-  font-size: 14px;
-  color: #374151;
+  background-color: #f8f8f8;
+  font-weight: bold;
 }
 
 .product-cell {
   display: flex;
   align-items: center;
-  gap: 12px;
 }
 
 .product-image {
-  width: 40px;
-  height: 40px;
+  width: 50px;
+  height: 50px;
   object-fit: cover;
+  margin-right: 10px;
   border-radius: 4px;
-}
-
-/* Date column styles */
-.table td:nth-child(5) {
-  white-space: nowrap;
-  color: #6b7280;
-  font-size: 13px;
 }
 
 .action-button {
-  padding: 6px 12px;
-  margin: 4px;
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 8px;
   border: none;
   border-radius: 4px;
-  font-size: 12px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  color: black;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
 }
 
-.action-button:hover {
-  opacity: 0.9;
+.action-button:last-child {
+  margin-bottom: 0;
+}
+
+.action-button.view {
+  background-color: #2196F3;
+  color: white;
+}
+
+.action-button.view:hover {
+  background-color: #1976D2;
+}
+
+.action-button.feedback {
+  background-color: #2196F3;
+  color: white;
+}
+
+.action-button.feedback:hover {
+  background-color: #1976D2;
+}
+
+.action-button.edit {
+  background-color: #FF9800;
+}
+
+.action-button.edit:hover {
+  background-color: #F57C00;
+}
+
+.action-button.delete {
+  background-color: #f44336;
+  color: white;
+}
+
+.action-button.delete:hover {
+  background-color: #f44336;
 }
 
 .delete-button {
-  background-color: #ef4444;
-  color: #ffffff;
+  background-color: #f44336;
+  color: white;
+  border-color: #f44336;
 }
 
-.delete-button:hover {
-  background-color: #dc2626;
-}
-
-.cancel-delete-button {
-  background-color: #6b7280;
-  color: #ffffff;
-  margin-left: 8px;
-}
-
-.cancel-delete-button:hover {
-  background-color: #4b5563;
-}
-
-.action-button:not(.delete-button) {
-  background-color: #3b82f6;
-  color: #ffffff;
-}
-
-.action-button:not(.delete-button):hover {
-  background-color: #2563eb;
-}
 
 .feedback-panel {
-  background-color: #f9fafb;
-  padding: 16px;
-}
-
-.feedback-panel h4 {
-  margin: 0 0 12px;
-  font-size: 16px;
-  color: #1f2937;
+  background-color: #f9f9f9;
+  padding: 15px;
 }
 
 .feedback-textarea {
   width: 100%;
-  min-height: 80px;
-  padding: 8px;
-  border: 1px solid #d1d5db;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 14px;
   resize: vertical;
 }
 
 .feedback-buttons {
   display: flex;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 10px;
 }
 
 .submit-button {
-  background-color: #10b981;
-  color: #ffffff;
   padding: 8px 16px;
+  background-color: #4caf50;
+  color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
 }
 
 .submit-button:hover {
-  background-color: #059669;
+  background-color: #388e3c;
 }
 
 .cancel-button {
-  background-color: #6b7280;
-  color: #ffffff;
   padding: 8px 16px;
+  background-color: #f44336;
+  color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
 }
 
 .cancel-button:hover {
-  background-color: #4b5563;
+  background-color: #d32f2f;
 }
 
 .feedback-previous {
   margin: 0;
-  font-size: 14px;
-  color: #374151;
+  color: #555;
 }
 
 .pagination {
   display: flex;
   justify-content: center;
-  align-items: center;
-  gap: 8px;
   margin-top: 20px;
+  gap: 5px;
 }
 
 .pagination-button {
   padding: 8px 12px;
-  border: 1px solid #d1d5db;
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
   border-radius: 4px;
-  background-color: #ffffff;
-  font-size: 14px;
-  color: #374151;
   cursor: pointer;
 }
 
-.pagination-button:hover:not(:disabled) {
-  background-color: #f3f4f6;
+.pagination-button:hover {
+  background-color: #e0e0e0;
 }
 
 .pagination-button.active {
-  background-color: #3b82f6;
-  color: #ffffff;
-  border-color: #3b82f6;
+  background-color: #4caf50;
+  color: white;
+  border-color: #4caf50;
 }
 
 .pagination-button:disabled {
-  color: #9ca3af;
+  background-color: #e0e0e0;
   cursor: not-allowed;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  .reviews-container {
-    padding: 16px;
-  }
+/* Ensure consistent row height and border management */
+.table tr {
+  border-bottom: 1px solid #ddd;
+}
 
+.table tr:last-child {
+  border-bottom: none;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
   .header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
   }
 
-  .header h2 {
-    font-size: 20px;
+  .filter-wrapper {
+    margin-top: 10px;
+    width: 100%;
   }
 
-  .table th,
-  .table td {
+  .table th, .table td {
     padding: 8px;
-    font-size: 12px;
-  }
-
-  .product-image {
-    width: 32px;
-    height: 32px;
+    font-size: 14px;
   }
 
   .action-button {
     padding: 4px 8px;
-    font-size: 10px;
+    font-size: 12px;
   }
 
-  .pagination-button {
-    padding: 6px 8px;
-    font-size: 12px;
+  .feedback-textarea {
+    padding: 8px;
+    font-size: 14px;
+  }
+
+  .submit-button, .cancel-button {
+    padding: 6px 12px;
+    font-size: 14px;
   }
 }
 
 @media (max-width: 480px) {
-  .table th,
-  .table td {
-    padding: 6px;
+  .reviews-container {
+    padding: 10px;
   }
 
-  .product-cell {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
+  .table th, .table td {
+    padding: 6px;
+    font-size: 12px;
+  }
+
+  .product-image {
+    width: 40px;
+    height: 40px;
+  }
+
+  .action-button {
+    padding: 3px 6px;
+    font-size: 10px;
   }
 
   .feedback-textarea {
-    min-height: 60px;
+    padding: 6px;
+    font-size: 12px;
   }
 
-  .feedback-buttons {
-    flex-direction: column;
+  .submit-button, .cancel-button {
+    padding: 4px 8px;
+    font-size: 12px;
   }
 }

@@ -15,7 +15,7 @@ const AboutDisplay = () => {
                 <div className="about-content">
                     <h1>About Us</h1>
                     <p>
-                        Welcome to <strong>Sneaker Haven</strong>, your ultimate destination for the latest and trendiest sneakers.
+                        Welcome to <strong>SneakerNp</strong>, your ultimate destination for the latest and trendiest sneakers.
                         We are committed to offering a curated selection of high-quality footwear, blending
                         style and comfort seamlessly.
                     </p>
@@ -33,7 +33,7 @@ const AboutDisplay = () => {
                 <div className="author-content">
                     <h2>Meet the Founder</h2>
                     <p>
-                        <strong>John Doe</strong>, the visionary behind Sneaker Haven, has been a sneaker enthusiast for over a decade.
+                        <strong>Aayush Rai</strong>, the visionary behind SneakerNp, has been a sneaker enthusiast for over a decade.
                         His passion for footwear and street culture led him to create a brand that speaks to every sneaker lover.
                     </p>
                 </div>

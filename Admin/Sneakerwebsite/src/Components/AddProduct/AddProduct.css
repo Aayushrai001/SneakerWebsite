@@ -63,7 +63,7 @@
     width: 240px; /* Bigger button */
     height: 52px;
     border-radius: 4px;
-    background-color: #007bff;
+    background-color: yellow;
     border: none;
     color: #ffffff;
     font-size: 17px;
@@ -102,7 +102,7 @@
   }
   
   .add-size-btn {
-    background-color: #28a745;
+    background-color: yellow;
     color: #ffffff;
   }
   

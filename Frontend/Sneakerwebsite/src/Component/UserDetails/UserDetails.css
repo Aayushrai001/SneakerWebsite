@@ -180,20 +180,6 @@
   background: #1976D2;
 }
 
-/* Toast customization */
-.Toastify__toast {
-  border-radius: 8px;
-  font-family: inherit;
-}
-
-.Toastify__toast--success {
-  background: #4CAF50;
-}
-
-.Toastify__toast--error {
-  background: #f44336;
-}
-
 /* Responsive design */
 @media (max-width: 1024px) {
   .user-details {

@@ -1,3 +1,4 @@
+// Importing necessary dependencies and components
 import React, { useState, useEffect } from 'react'
 import {
   BarChart,
@@ -12,13 +13,16 @@ import {
   Cell,
   LineChart,
   Line,
-  Legend
-} from 'recharts'
-import { toast } from 'react-hot-toast'
-import { FiPackage, FiShoppingCart, FiUsers, FiClock } from 'react-icons/fi'
-import './Overview.css'
+  Legend,
+  LabelList
+} from 'recharts' // Importing Recharts components for visualizations
+import { toast } from 'react-hot-toast' 
+import { FiPackage, FiShoppingCart, FiUsers, FiClock } from 'react-icons/fi' 
+import './Overview.css' 
 
+// Overview component for the admin dashboard
 const Overview = () => {
+  // State to store all overview-related data
   const [overviewData, setOverviewData] = useState({
     totalProducts: 0,
     totalEarnings: 0,
@@ -31,45 +35,52 @@ const Overview = () => {
     topProducts: [],
     recentTransactions: []
   })
+
+  // State to track loading status
   const [loading, setLoading] = useState(true)
 
+  // Fetch overview data when the component mounts
   useEffect(() => {
     const fetchOverviewData = async () => {
       try {
         const response = await fetch('http://localhost:5000/admin/overview', {
           headers: {
-            'auth-token': localStorage.getItem('admin-token')
+            'auth-token': localStorage.getItem('admin-token') // Send auth token from local storage
           }
         })
         const data = await response.json()
         if (data.success) {
-          setOverviewData(data.data)
-          toast.success('Overview data loaded successfully')
+          setOverviewData(data.data) // Store the data in state if successful
         } else {
-          toast.error('Failed to fetch overview data')
+          // No action taken if not successful
         }
       } catch (error) {
         console.error('Error fetching overview data:', error)
-        toast.error('Error fetching overview data')
+        toast.error('Error fetching overview data') // Show error toast
       } finally {
-        setLoading(false)
+        setLoading(false) // Set loading to false whether success or failure
       }
     }
 
-    fetchOverviewData()
+    fetchOverviewData() // Trigger the fetch function
   }, [])
 
+  // Colors used for the pie chart
   const pieColors = ['#4CAF50', '#FF5722', '#2196F3', '#FFC107', '#9C27B0']
 
+  // If data is still loading, show loading message
   if (loading) {
     return <div className="loading">Loading overview data...</div>
   }
 
+  // Main return block of the Overview component
   return (
     <div className="overview-container">
       <h2 className="overview-title">Admin Dashboard Overview</h2>
 
+      {/* Overview summary cards */}
       <div className="overview-cards">
+        {/* Total Products Card */}
         <div className="card">
           <div className="card-icon">
             <FiPackage />
@@ -79,6 +90,8 @@ const Overview = () => {
             <p>{overviewData.totalProducts}</p>
           </div>
         </div>
+
+        {/* Total Earnings Card */}
         <div className="card">
           <div className="card-icon">
           </div>
@@ -87,6 +100,8 @@ const Overview = () => {
             <p>Rs. {overviewData.totalEarnings.toLocaleString()}</p>
           </div>
         </div>
+
+        {/* Total Orders Card */}
         <div className="card">
           <div className="card-icon">
             <FiShoppingCart />
@@ -96,6 +111,8 @@ const Overview = () => {
             <p>{overviewData.totalOrders}</p>
           </div>
         </div>
+
+        {/* Total Users Card */}
         <div className="card">
           <div className="card-icon">
             <FiUsers />
@@ -105,6 +122,8 @@ const Overview = () => {
             <p>{overviewData.totalUsers || 0}</p>
           </div>
         </div>
+
+        {/* Pending Orders Card */}
         <div className="card">
           <div className="card-icon">
             <FiClock />
@@ -116,7 +135,9 @@ const Overview = () => {
         </div>
       </div>
 
+      {/* Sales Charts Section */}
       <div className="charts-grid">
+        {/* Monthly Sales Bar Chart */}
         <div className="chart-section">
           <h3 className="chart-title">Monthly Sales Analysis</h3>
           <ResponsiveContainer width="100%" height={300}>
@@ -124,12 +145,15 @@ const Overview = () => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis />
-              <Tooltip formatter={(value) => `Rs. {value.toLocaleString()}`} />
-              <Bar dataKey="sales" fill="#4CAF50" />
+              <Tooltip formatter={(value) => `Rs. ${value.toLocaleString()}`} />
+              <Bar dataKey="sales" fill="#4CAF50">
+                <LabelList dataKey="sales" position="top" formatter={(value) => `Rs. ${value.toLocaleString()}`} />
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
 
+        {/* Yearly Sales Line Chart */}
         <div className="chart-section">
           <h3 className="chart-title">Yearly Sales Trend</h3>
           <ResponsiveContainer width="100%" height={300}>
@@ -145,7 +169,9 @@ const Overview = () => {
         </div>
       </div>
 
+      {/* Top Products & Transactions Charts */}
       <div className="charts-grid">
+        {/* Pie Chart for Top Products */}
         <div className="chart-section">
           <h3 className="chart-title">Top Selling Products</h3>
           <ResponsiveContainer width="100%" height={350}>
@@ -157,18 +183,22 @@ const Overview = () => {
                 cx="50%"
                 cy="50%"
                 outerRadius={120}
-                label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                label={({ name, percent, value }) =>
+                  `${name} (${(percent * 100).toFixed(0)}%) - ${value} orders`
+                }
               >
+                {/* Color each slice differently */}
                 {overviewData.topProducts.map((entry, index) => (
-                  <Cell key={`cell-{index}`} fill={pieColors[index % pieColors.length]} />
+                  <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => `{value} orders`} />
+              <Tooltip formatter={(value) => `${value} orders`} />
               <Legend />
             </PieChart>
           </ResponsiveContainer>
         </div>
 
+        {/* Recent Transactions List */}
         <div className="chart-section">
           <h3 className="chart-title">Recent Transactions</h3>
           <div className="transactions-list">

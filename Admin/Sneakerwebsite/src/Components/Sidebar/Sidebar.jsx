@@ -7,7 +7,6 @@ import list_product_icon from '../../assets/Product_list_icon.svg';
 import ratingfeedback_icon from '../../assets/feedback.png';
 import orders_icon from '../../assets/orders.png';
 import Transaction_icon from '../../assets/transaction.png';
-import custom_icon from '../../assets/custom.png';
 import dashboard_icon from '../../assets/dashboard.png';
 
 const Sidebar = ({ onLogout }) => {
@@ -55,12 +54,6 @@ const Sidebar = ({ onLogout }) => {
         <div className="sidebar-item">
           <img src={Transaction_icon} alt="Transaction" />
           <p>Transaction</p>
-        </div>
-      </Link>
-      <Link to="/admin/custom" style={{ textDecoration: 'none' }}>
-        <div className="sidebar-item">
-          <img src={custom_icon} alt="Custom" />
-          <p>Custom</p> 
         </div>
       </Link>
       <div className="sidebar-item logout">

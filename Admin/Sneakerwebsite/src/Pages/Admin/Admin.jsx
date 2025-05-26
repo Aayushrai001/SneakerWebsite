@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import './Admin.css';
 import Sidebar from '../../Components/Sidebar/Sidebar';
 import Navabr from '../../Components/Navbar/Navabr';
@@ -9,7 +9,7 @@ import ReviewsFeedback from '../../Components/ReviewsFeedback/ReviewsFeedback';
 import Orders from '../../Components/Orders/Orders';
 import Transaction from '../../Components/Transaction/Transaction';
 import Overview from '../../Components/Overview/Overview';
-import Custom from '../../Components/Custom/Custom'
+
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -18,6 +18,39 @@ const Admin = () => {
     localStorage.removeItem('auth-token');
     navigate('/login', { replace: true });
   };
+
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const token = localStorage.getItem('auth-token');
+        if (!token) {
+          handleLogout();
+          return;
+        }
+
+        const response = await fetch('http://localhost:5000/admin/check-session', {
+          headers: {
+            'auth-token': token
+          }
+        });
+
+        if (!response.ok) {
+          handleLogout();
+        }
+      } catch (error) {
+        console.error('Session check error:', error);
+        handleLogout();
+      }
+    };
+
+    // Check session every minute
+    const intervalId = setInterval(checkSession, 60000);
+
+    // Initial check
+    checkSession();
+
+    return () => clearInterval(intervalId);
+  }, [navigate]);
 
   return (
     <div className="admin">
@@ -32,7 +65,6 @@ const Admin = () => {
           <Route path="reviewsfeedback" element={<ReviewsFeedback />} />
           <Route path="orders" element={<Orders />} />
           <Route path="transaction" element={<Transaction />} />
-          <Route path="custom" element={<Custom />} />
         </Routes>
       </div>
     </div>

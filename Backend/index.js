@@ -21,6 +21,29 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Drop unique index on name and create compound index
+const setupIndexes = async () => {
+  try {
+    // Drop the existing unique index on name if it exists
+    await Product.collection.dropIndex('name_1');
+    console.log('Dropped unique index on name field');
+
+    // Create a compound index on name and category
+    await Product.collection.createIndex(
+      { name: 1, category: 1 },
+      { unique: true }
+    );
+    console.log('Created compound index on name and category');
+  } catch (error) {
+    console.log('Index setup completed:', error.message);
+  }
+};
+
+// Call setupIndexes when connecting to database
+connectDB().then(() => {
+  setupIndexes();
+});
+
 // Nodemailer transporter
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -138,6 +161,19 @@ app.post('/addproduct', upload, async (req, res) => {
       return res.status(400).json({ success: false, message: 'All text fields are required' });
     }
 
+    // Check if product with same name exists in the same category
+    const existingProduct = await Product.findOne({
+      name: { $regex: new RegExp(`^${name.trim()}$`, 'i') }, // Case-insensitive match
+      category: category.trim()
+    });
+
+    if (existingProduct) {
+      return res.status(400).json({
+        success: false,
+        message: 'A product with this name already exists in this category. Please use a different name or select a different category.'
+      });
+    }
+
     // Validate price
     const price = parseFloat(new_price);
     if (isNaN(price) || price <= 0) {
@@ -169,8 +205,8 @@ app.post('/addproduct', upload, async (req, res) => {
       }
     }
 
-    // Save image to disk
-    const filename = `product_${Date.now()}${path.extname(req.file.originalname)}`;
+    // Save image to disk with a unique filename
+    const filename = `product_${Date.now()}_${Math.random().toString(36).substring(7)}${path.extname(req.file.originalname)}`;
     const imagePath = path.join(uploadDir, filename);
     await sharp(req.file.buffer)
       .toFormat('jpeg') // Convert to JPEG for consistency
@@ -263,13 +299,13 @@ const Users = mongoose.model('Users', new mongoose.Schema({
   password: { type: String },
   phone: { type: String },
   address: { type: String },
-  cartData: { type: Object },
-  favoriteData: { type: Object },
+  cartData: { type: Object, default: {} },
+  favoriteData: { type: Object, default: {} },
   date: { type: Date, default: Date.now },
   isVerified: { type: Boolean, default: false },
   verificationToken: { type: String },
   verificationTokenExpires: { type: Date },
-  profileImage: { type: String }, // Add profile image field
+  profileImage: { type: String },
 }));
 
 const fetchUser = (req, res, next) => {
@@ -543,12 +579,22 @@ app.post('/login', async (req, res) => {
       return res.status(400).json({ success: false, errors: 'Wrong Password' });
     }
 
-    // Generate token
-    const token = Jwt.sign({ user: { id: user.id } }, 'secret_ecom');
-    res.json({ success: true, token });
+    // Generate token with 2hrs expiration
+    const token = Jwt.sign({ user: { id: user.id } }, 'secret_ecom', { expiresIn: '1h' });
+    res.json({ success: true, token, expiresIn: 7200 }); // Send expiration time in seconds
   } catch (error) {
     console.error('Login error:', error.stack);
     res.status(500).json({ success: false, message: 'Server error during login' });
+  }
+});
+
+// Add new endpoint to check session validity
+app.get('/check-session', fetchUser, async (req, res) => {
+  try {
+    // If fetchUser middleware passes, the token is valid
+    res.json({ success: true, message: 'Session is valid' });
+  } catch (error) {
+    res.status(401).json({ success: false, message: 'Session expired' });
   }
 });
 
@@ -619,62 +665,21 @@ app.post('/RemoveCart', fetchUser, async (req, res) => {
     let userData = await Users.findOne({ _id: req.user.id });
     const { itemId } = req.body;
     
-    // Check if the item exists and has quantity > 0
-    if (userData.cartData[itemId] && userData.cartData[itemId].quantity > 0) {
-      // Decrease quantity
-      userData.cartData[itemId].quantity -= 1;
-      
-      // Remove the item if quantity becomes 0
-      if (userData.cartData[itemId].quantity === 0) {
-        delete userData.cartData[itemId];
-      }
-      
-      await Users.findOneAndUpdate({ _id: req.user.id }, { cartData: userData.cartData });
-      return res.json({ message: 'Item removed from cart', cartData: userData.cartData });
+    if (!userData.cartData[itemId]) {
+      return res.status(400).json({ error: 'Item not found in cart' });
     }
-    
-    res.status(400).json({ error: 'Item not found in cart or already at 0' });
-  } catch (error) {
-    console.error("Error removing from cart:", error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
 
-app.post('/getcart', fetchUser, async (req, res) => {
-  let userData = await Users.findOne({ _id: req.user.id });
-  res.json(userData.cartData);
-});
-
-app.post('/AddToFavourite', fetchUser, async (req, res) => {
-  try {
-    let userData = await Users.findOne({ _id: req.user.id });
-    const { itemId, size } = req.body;
-    
-    // Initialize favoriteData if it doesn't exist
-    if (!userData.favoriteData) {
-      userData.favoriteData = {};
-    }
-    
-    // Initialize the favorite item if it doesn't exist
-    if (!userData.favoriteData[itemId]) {
-      userData.favoriteData[itemId] = { quantity: 0, size: size || 'N/A' };
-    }
-    
-    // Update the quantity and size
-    userData.favoriteData[itemId].quantity += 1;
-    if (size) {
-      userData.favoriteData[itemId].size = size;
-    }
+    // Remove the item completely from cart
+    delete userData.cartData[itemId];
     
     await Users.findOneAndUpdate(
       { _id: req.user.id }, 
-      { $set: { favoriteData: userData.favoriteData } },
-      { new: true }
+      { cartData: userData.cartData }
     );
     
-    res.json({ success: true, message: 'Added to Favourite', favoriteData: userData.favoriteData });
+    res.json({ success: true, message: 'Item removed from cart', cartData: userData.cartData });
   } catch (error) {
-    console.error("Error adding to favourite:", error);
+    console.error("Error removing from cart:", error);
     res.status(500).json({ success: false, error: 'Internal Server Error' });
   }
 });
@@ -684,40 +689,35 @@ app.post('/RemoveFavourite', fetchUser, async (req, res) => {
     let userData = await Users.findOne({ _id: req.user.id });
     const { itemId } = req.body;
     
-    // Initialize favoriteData if it doesn't exist
-    if (!userData.favoriteData) {
-      userData.favoriteData = {};
+    if (!userData.favoriteData[itemId]) {
+      return res.status(400).json({ error: 'Item not found in favorites' });
     }
+
+    // Remove the item completely from favorites
+    delete userData.favoriteData[itemId];
     
-    // Check if the item exists and has quantity > 0
-    if (userData.favoriteData[itemId] && userData.favoriteData[itemId].quantity > 0) {
-      // Decrease quantity
-      userData.favoriteData[itemId].quantity -= 1;
-      
-      // Remove the item if quantity becomes 0
-      if (userData.favoriteData[itemId].quantity === 0) {
-        delete userData.favoriteData[itemId];
-      }
-      
-      await Users.findOneAndUpdate(
-        { _id: req.user.id }, 
-        { $set: { favoriteData: userData.favoriteData } },
-        { new: true }
-      );
-      
-      return res.json({ success: true, message: 'Item removed from Favourite', favoriteData: userData.favoriteData });
-    }
+    await Users.findOneAndUpdate(
+      { _id: req.user.id }, 
+      { favoriteData: userData.favoriteData }
+    );
     
-    res.status(400).json({ success: false, error: 'Item not found in favourites or already at 0' });
+    res.json({ success: true, message: 'Item removed from favorites', favoriteData: userData.favoriteData });
   } catch (error) {
-    console.error("Error removing from favourite:", error);
+    console.error("Error removing from favorites:", error);
     res.status(500).json({ success: false, error: 'Internal Server Error' });
   }
 });
 
 app.post('/getfavourite', fetchUser, async (req, res) => {
-  let userData = await Users.findOne({ _id: req.user.id });
-  res.json(userData.favoriteData);
+  try {
+    const userData = await Users.findOne({ _id: req.user.id });
+    if (!userData) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    res.json(userData.favoriteData);
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 });
 
 app.post('/initialize-khalti', fetchUser, async (req, res) => {
@@ -728,7 +728,7 @@ app.post('/initialize-khalti', fetchUser, async (req, res) => {
     if (!cartItems || !totalPrice || !Array.isArray(cartItems) || cartItems.length === 0) {
       return res.status(400).json({ success: false, message: 'Invalid request: cartItems and totalPrice required' });
     }
-    const user = await Users.findById(req.user.id).select('name email');
+    const user = await Users.findById(req.user.id).select('name email phone');
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
     const purchasedItems = [];
@@ -932,9 +932,10 @@ app.post('/initialize-khalti', fetchUser, async (req, res) => {
       customer_info: {
         name: user.name || 'Customer',
         email: user.email || 'customer@example.com',
-        phone: '9800000000',
+        phone: user.phone || '9800000000', // Use actual user phone number with fallback
       },
     };
+    console.log('Khalti paymentDetails:', paymentDetails);
 
     const paymentInitiate = await initializeKhaltiPayment(paymentDetails);
     if (!paymentInitiate.payment_url) {
@@ -949,188 +950,134 @@ app.post('/initialize-khalti', fetchUser, async (req, res) => {
 });
 
 app.get('/complete-khalti-payment', async (req, res) => {
-  const { pidx, transaction_id, amount, purchase_order_id, status } = req.query;
-  console.log('Received complete-khalti-payment request:', { pidx, transaction_id, amount, purchase_order_id, status });
-
-  try {
-    // Ensure FRONTEND_URL is defined
-    if (!process.env.FRONTEND_URL) {
-      console.error('FRONTEND_URL is not defined in environment variables');
-      return res.status(500).json({ success: false, message: 'Server configuration error: FRONTEND_URL not set' });
-    }
-
-    if (status === 'failed') {
-      const failureRedirectUrl = `${process.env.FRONTEND_URL}/payment-failure?reason=insufficient_balance`;
-      console.log('Payment failed, redirecting to:', failureRedirectUrl);
-      return res.redirect(failureRedirectUrl);
-    }
-
-    const paymentInfo = await verifyKhaltiPayment(pidx);
-    console.log('Payment verification result:', paymentInfo);
-
-    if (paymentInfo.status !== 'Completed' || paymentInfo.transaction_id !== transaction_id || Number(paymentInfo.total_amount) !== Number(amount)) {
-      const failureRedirectUrl = `${process.env.FRONTEND_URL}/payment-failure?reason=verification_failed`;
-      console.log('Verification failed, redirecting to:', failureRedirectUrl);
-      return res.redirect(failureRedirectUrl);
-    }
-
-    const purchasedItem = await PurchasedItem.findById(purchase_order_id);
-    if (!purchasedItem || purchasedItem.totalPrice !== Number(amount)) {
-      const failureRedirectUrl = `${process.env.FRONTEND_URL}/payment-failure?reason=purchased_item_not_found_or_amount_mismatch`;
-      console.log('Purchased item not found or amount mismatch, redirecting to:', failureRedirectUrl);
-      return res.redirect(failureRedirectUrl);
-    }
-
-    const product = await Product.findById(purchasedItem.product);
-    if (!product) {
-      const failureRedirectUrl = `${process.env.FRONTEND_URL}/payment-failure?reason=product_not_found`;
-      console.log('Product not found, redirecting to:', failureRedirectUrl);
-      return res.redirect(failureRedirectUrl);
-    }
-
-    const sizeIndex = product.sizes.findIndex(s => s.size === purchasedItem.size);
-    if (sizeIndex === -1) {
-      const failureRedirectUrl = `${process.env.FRONTEND_URL}/payment-failure?reason=size_not_found`;
-      console.log('Size not found, redirecting to:', failureRedirectUrl);
-      return res.redirect(failureRedirectUrl);
-    }
-
-    const newQuantity = Math.max(0, product.sizes[sizeIndex].quantity - purchasedItem.quantity);
-    product.sizes[sizeIndex].quantity = newQuantity;
-    await product.save();
-    console.log(`Updated product ${product._id} size ${purchasedItem.size} to quantity ${newQuantity}`);
-
-    await PurchasedItem.findByIdAndUpdate(purchase_order_id, { payment: 'completed' });
-    const payment = await Payment.create({
-      user: purchasedItem.user,
-      transactionId: transaction_id,
-      pidx,
-      product: purchasedItem.product,
-      productName: product.name,
-      quantity: purchasedItem.quantity,
-      size: purchasedItem.size,
-      amount: Number(amount),
-      productImage: purchasedItem.productImage,
-      purchasedItemId: purchasedItem._id,
-      dataFromVerificationReq: paymentInfo,
-      apiQueryFromUser: req.query,
-      paymentGateway: 'khalti',
-      status: 'success',
-    });
-
-    // Send confirmation email
-    const user = await Users.findById(purchasedItem.user).select('name email');
-    if (!user) {
-      console.error('User not found for email:', purchasedItem.user);
-    } else {
-      const purchasedItems = await PurchasedItem.find({
-        user: purchasedItem.user,
-        payment: 'completed',
-        createdAt: { $gte: new Date(Date.now() - 5 * 60 * 1000) },
-      }).populate('product', 'name image');
-
-      const orderDetails = [];
-      const attachments = [];
-
-      for (let i = 0; i < purchasedItems.length; i++) {
-        const item = purchasedItems[i];
-        const imagePath = item.productImage.startsWith('/')
-          ? path.join(__dirname, 'upload/images', path.basename(item.productImage))
-          : item.productImage;
-
-        let imageData;
-        try {
-          imageData = fs.readFileSync(imagePath);
-        } catch (err) {
-          console.error(`Failed to read image for product ${item.product.name}:`, err);
-          imageData = null;
+    const { pidx, transaction_id, amount, purchase_order_id, status } = req.query;
+    
+    try {
+        if (status === 'failed') {
+            const failureRedirectUrl = `${process.env.FRONTEND_URL}/payment-failure?reason=insufficient_balance`;
+            return res.redirect(failureRedirectUrl);
         }
 
-        const cid = `product_${i}_${Date.now()}`;
-        orderDetails.push({
-          productName: item.product.name,
-          quantity: item.quantity,
-          size: item.size,
-          totalPrice: (item.totalPrice / 100).toFixed(2),
-          imageCid: imageData ? cid : null,
+        // Verify Khalti payment
+        const paymentInfo = await verifyKhaltiPayment(pidx);
+        
+        if (paymentInfo.status !== 'Completed' || paymentInfo.transaction_id !== transaction_id || Number(paymentInfo.total_amount) !== Number(amount)) {
+            const failureRedirectUrl = `${process.env.FRONTEND_URL}/payment-failure?reason=verification_failed`;
+            return res.redirect(failureRedirectUrl);
+        }
+
+        // Find the purchased item
+        const purchasedItem = await PurchasedItem.findById(purchase_order_id);
+        if (!purchasedItem || purchasedItem.totalPrice !== Number(amount)) {
+            const failureRedirectUrl = `${process.env.FRONTEND_URL}/payment-failure?reason=purchased_item_not_found_or_amount_mismatch`;
+            return res.redirect(failureRedirectUrl);
+        }
+
+        // Update product stock
+        const product = await Product.findById(purchasedItem.product);
+        if (!product) {
+            const failureRedirectUrl = `${process.env.FRONTEND_URL}/payment-failure?reason=product_not_found`;
+            return res.redirect(failureRedirectUrl);
+        }
+
+        const sizeIndex = product.sizes.findIndex(s => s.size === purchasedItem.size);
+        if (sizeIndex === -1) {
+            const failureRedirectUrl = `${process.env.FRONTEND_URL}/payment-failure?reason=size_not_found`;
+            return res.redirect(failureRedirectUrl);
+        }
+
+        // Update product quantity
+        const newQuantity = Math.max(0, product.sizes[sizeIndex].quantity - purchasedItem.quantity);
+        product.sizes[sizeIndex].quantity = newQuantity;
+        await product.save();
+
+        // Mark purchase as completed
+        await PurchasedItem.findByIdAndUpdate(purchase_order_id, { payment: 'completed' });
+
+        // Create payment record
+        const payment = await Payment.create({
+            user: purchasedItem.user,
+            transactionId: transaction_id,
+            pidx,
+            product: purchasedItem.product,
+            productName: product.name,
+            quantity: purchasedItem.quantity,
+            size: purchasedItem.size,
+            amount: Number(amount),
+            productImage: purchasedItem.productImage,
+            purchasedItemId: purchasedItem._id,
+            dataFromVerificationReq: paymentInfo,
+            apiQueryFromUser: req.query,
+            paymentGateway: 'khalti',
+            status: 'success',
         });
 
-        if (imageData) {
-          attachments.push({
-            filename: path.basename(imagePath),
-            content: imageData,
-            cid: cid,
-          });
+        // Send confirmation email
+        const user = await Users.findById(purchasedItem.user).select('name email');
+        if (user) {
+            const imagePath = purchasedItem.productImage.startsWith('/')
+                ? path.join(__dirname, 'upload/images', path.basename(purchasedItem.productImage))
+                : purchasedItem.productImage;
+
+            let imageData;
+            try {
+                imageData = fs.readFileSync(imagePath);
+            } catch (err) {
+                console.error('Error reading product image:', err);
+                imageData = null;
+            }
+
+            const mailOptions = {
+                from: process.env.EMAIL_USER,
+                to: user.email,
+                subject: 'Your Order Confirmation',
+                html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <h2 style="color: #333;">Order Confirmation</h2>
+                        <p>Dear ${user.name},</p>
+                        <p>Thank you for your purchase! Your order has been successfully placed. Below are the details of your order:</p>
+                        
+                        <h3 style="color: #333;">Order Details</h3>
+                        <p><strong>Transaction ID:</strong> ${transaction_id}</p>
+                        <p><strong>Order Date:</strong> ${new Date().toLocaleString()}</p>
+                        
+                        <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 10px 0;">
+                            <img src="cid:productImage" alt="${product.name}" style="max-width: 200px; height: auto; margin-bottom: 15px; display: block;" />
+                            <p><strong>Product:</strong> ${product.name}</p>
+                            <p><strong>Quantity:</strong> ${purchasedItem.quantity}</p>
+                            <p><strong>Size:</strong> ${purchasedItem.size}</p>
+                            <p><strong>Total Amount:</strong> Rs. ${purchasedItem.totalPrice / 100}</p>
+                        </div>
+
+                        <p>Your order will be processed soon, and you will receive updates on the delivery status.</p>
+                        <p>If you have any questions, please contact our support team.</p>
+                        
+                        <p style="color: #777;">Best regards,<br>Sneaker.Np Team</p>
+                    </div>
+                `,
+                attachments: imageData ? [{
+                    filename: path.basename(imagePath),
+                    content: imageData,
+                    cid: 'productImage'
+                }] : []
+            };
+
+            try {
+                await transporter.sendMail(mailOptions);
+                console.log(`Order confirmation email sent to ${user.email}`);
+            } catch (emailError) {
+                console.error('Error sending order confirmation email:', emailError);
+            }
         }
-      }
 
-      const totalAmount = orderDetails.reduce((sum, item) => sum + parseFloat(item.totalPrice), 0).toFixed(2);
-
-      const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: user.email,
-        subject: 'Your Order Confirmation and Bill',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h2 style="color: #333;">Order Confirmation</h2>
-            <p>Dear ${user.name || 'Customer'},</p>
-            <p>Thank you for your purchase! Your order has been successfully placed. Below are the details of your order:</p>
-            <h3 style="color: #333;">Order Details</h3>
-            <p><strong>Transaction ID:</strong> ${transaction_id}</p>
-            <p><strong>Order Date:</strong> ${new Date().toLocaleString()}</p>
-            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-              <thead>
-                <tr style="background-color: #f2f2f2;">
-                  <th style="padding: 10px; border: 1px solid #ddd;">Product</th>
-                  <th style="padding: 10px; border: 1px solid #ddd;">Image</th>
-                  <th style="padding: 10px; border: 1px solid #ddd;">Quantity</th>
-                  <th style="padding: 10px; border: 1px solid #ddd;">Size</th>
-                  <th style="padding: 10px; border: 1px solid #ddd;">Price (Rs.)</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${orderDetails.map(item => `
-                  <tr>
-                    <td style="padding: 10px; border: 1px solid #ddd;">${item.productName}</td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">
-                      ${item.imageCid
-            ? `<img src="cid:${item.imageCid}" alt="${item.productName}" style="width: 50px; height: auto;" />`
-            : 'No image available'}
-                    </td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">${item.quantity}</td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">${item.size}</td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">${item.totalPrice}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-            <p><strong>Total Amount:</strong> Rs. ${totalAmount}</p>
-            <p>Your order will be processed soon, and you will receive updates on the delivery status.</p>
-            <p>If you have any questions, please contact our support team.</p>
-            <p>Thank you for shopping with us!</p>
-            <p style="color: #777;">Best regards,<br>Sneaker.Np</p>
-          </div>
-        `,
-        attachments: attachments,
-      };
-
-      try {
-        await transporter.sendMail(mailOptions);
-        console.log(`Bill email sent to ${user.email} with ${attachments.length} image(s) attached`);
-      } catch (emailError) {
-        console.error('Error sending bill email:', emailError);
-      }
+        // Redirect to success page
+        const successRedirectUrl = `${process.env.FRONTEND_URL}/payment-success?transaction_id=${transaction_id}`;
+        return res.redirect(successRedirectUrl);
+    } catch (error) {
+        console.error('Error in complete-khalti-payment:', error);
+        const failureRedirectUrl = `${process.env.FRONTEND_URL}/payment-failure?reason=server_error`;
+        return res.redirect(failureRedirectUrl);
     }
-
-    const successRedirectUrl = `${process.env.FRONTEND_URL}/payment-success?transaction_id=${transaction_id}`;
-    console.log('Redirecting to success page:', successRedirectUrl);
-    return res.redirect(successRedirectUrl);
-  } catch (error) {
-    console.error('Error in complete-khalti-payment:', error);
-    const failureRedirectUrl = `${process.env.FRONTEND_URL}/payment-failure?reason=server_error`;
-    console.log('Redirecting to failure page:', failureRedirectUrl);
-    return res.redirect(failureRedirectUrl);
-  }
 });
 
 app.get('/api/payments/:transactionId', async (req, res) => {
@@ -1285,19 +1232,32 @@ app.post('/restockproduct', async (req, res) => {
       }
     }
 
-    sizes.forEach(sizeInput => {
+    // Check each size input
+    for (const sizeInput of sizes) {
       const existingSize = product.sizes.find(s => s.size === sizeInput.size);
+      
       if (existingSize) {
-        existingSize.quantity = Number(sizeInput.quantity);
+        if (existingSize.quantity > 0) {
+          return res.status(400).json({
+            success: false,
+            message: `Size ${sizeInput.size} already exists with quantity ${existingSize.quantity}. Please remove the existing size first or update it.`
+          });
+        } else if (existingSize.quantity === 0) {
+          // Replace the size with quantity 0
+          existingSize.quantity = Number(sizeInput.quantity);
+        }
       } else {
+        // Add new size
         product.sizes.push({
           size: sizeInput.size.trim(),
           quantity: Number(sizeInput.quantity),
         });
       }
-    });
+    }
 
+    // Remove any sizes with quantity 0
     product.sizes = product.sizes.filter(s => s.quantity > 0);
+    
     await product.save();
     res.json({ success: true, message: 'Product restocked successfully', product });
   } catch (error) {
@@ -1308,29 +1268,34 @@ app.post('/restockproduct', async (req, res) => {
 
 app.get('/admin/orders', async (req, res) => {
   try {
-    const { page = 1, filter = 'all' } = req.query;
-    const limit = 5; // Number of orders per page
+    const { page = 1, filter = 'all', status = 'pending' } = req.query;
+    const limit = 10; // Increased from 5 to 10 for better pagination
     const skip = (page - 1) * limit;
 
-    let dateFilter = { delivery: 'pending' }; // Only fetch pending delivery orders
+    let dateFilter = {};
     if (filter === 'today') {
       dateFilter = {
-        ...dateFilter,
         purchaseDate: { $gte: new Date().setHours(0, 0, 0, 0) }
       };
     } else if (filter === 'week') {
       dateFilter = {
-        ...dateFilter,
         purchaseDate: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
       };
     } else if (filter === 'month') {
       dateFilter = {
-        ...dateFilter,
         purchaseDate: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
       };
     }
 
-    const orders = await PurchasedItem.find(dateFilter)
+    // Add delivery status filter
+    const deliveryFilter = status === 'delivered' ? 
+      { delivery: 'delivered' } : 
+      { delivery: { $ne: 'delivered' } };
+
+    const orders = await PurchasedItem.find({
+      ...dateFilter,
+      ...deliveryFilter
+    })
       .populate('user', 'name email address')
       .populate('product', 'name image')
       .skip(skip)
@@ -1348,7 +1313,10 @@ app.get('/admin/orders', async (req, res) => {
         : null
     }));
 
-    const totalOrders = await PurchasedItem.countDocuments(dateFilter);
+    const totalOrders = await PurchasedItem.countDocuments({
+      ...dateFilter,
+      ...deliveryFilter
+    });
     const totalPages = Math.ceil(totalOrders / limit);
 
     res.json({ success: true, orders: formattedOrders, totalPages });
@@ -1673,7 +1641,7 @@ app.post('/admin/verify-otp', async (req, res) => {
     }
 
     // Generate JWT token
-    const token = Jwt.sign({ admin: { email } }, 'secret_ecom', { expiresIn: '24h' });
+    const token = Jwt.sign({ admin: { email } }, 'secret_ecom', { expiresIn: '3h' });
 
     // Clean up session
     await AdminSession.deleteOne({ email });
@@ -1710,7 +1678,7 @@ app.get('/admin/protected', verifyAdmin, (req, res) => {
 });
 
 // Add admin feedback endpoint
-app.put('/admin/review/:id/feedback', async (req, res) => {
+app.put('/admin/review/:id/feedback', verifyAdmin, async (req, res) => {
   try {
     const { adminFeedback } = req.body;
     const review = await Review.findByIdAndUpdate(
@@ -1920,7 +1888,7 @@ app.get('/admin/overview', async (req, res) => {
       success: true,
       data: {
         totalProducts,
-        totalEarnings: totalEarnings[0]?.total || 0,
+        totalEarnings: (totalEarnings[0]?.total || 0) / 100,
         totalOrders,
         totalUsers,
         newUsers,
@@ -2021,3 +1989,244 @@ app.post('/reset-password', async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+// Add new endpoint to check admin session validity
+app.get('/admin/check-session', verifyAdmin, async (req, res) => {
+  try {
+    // If verifyAdmin middleware passes, the token is valid
+    res.json({ success: true, message: 'Session is valid' });
+  } catch (error) {
+    res.status(401).json({ success: false, message: 'Session expired' });
+  }
+});
+
+// Endpoint for editing product size
+app.post('/editsize', async (req, res) => {
+  try {
+    const { id, oldSize, newSize, newQuantity } = req.body;
+    
+    // Validate input
+    if (!id || !oldSize || !newSize || newQuantity === undefined) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Missing required fields: id, oldSize, newSize, and newQuantity are required' 
+      });
+    }
+
+    // Find the product
+    const product = await Product.findOne({ id });
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+
+    // Find the size to update
+    const sizeIndex = product.sizes.findIndex(s => s.size === oldSize);
+    if (sizeIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Size not found in product' });
+    }
+
+    // Check if new size already exists (if changing size)
+    if (oldSize !== newSize) {
+      const existingSize = product.sizes.find(s => s.size === newSize);
+      if (existingSize) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'A size with this value already exists for this product' 
+        });
+      }
+    }
+
+    // Update the size
+    product.sizes[sizeIndex] = {
+      size: newSize,
+      quantity: Number(newQuantity)
+    };
+
+    // Save the changes
+    await product.save();
+
+    res.json({ 
+      success: true, 
+      message: 'Size updated successfully',
+      product 
+    });
+  } catch (error) {
+    console.error('Error updating size:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error updating size: ' + error.message 
+    });
+  }
+});
+
+// Add edit product endpoint
+app.post('/editproduct', async (req, res) => {
+  try {
+    const { id, name, new_price, description, sizes } = req.body;
+
+    // Validate input
+    if (!id || !name?.trim() || !description?.trim()) {
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+
+    // Validate price
+    const price = parseFloat(new_price);
+    if (isNaN(price) || price <= 0) {
+      return res.status(400).json({ success: false, message: 'Price must be a positive number' });
+    }
+
+    // Validate sizes
+    if (!Array.isArray(sizes) || sizes.length === 0) {
+      return res.status(400).json({ success: false, message: 'At least one size is required' });
+    }
+
+    for (const size of sizes) {
+      if (!size.size?.trim()) {
+        return res.status(400).json({ success: false, message: 'Size cannot be empty' });
+      }
+      if (!Number.isInteger(Number(size.quantity)) || Number(size.quantity) < 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Quantity must be a non-negative integer',
+        });
+      }
+    }
+
+    // Find and update the product
+    const product = await Product.findOne({ id });
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+
+    // Check if name is being changed and if it conflicts with another product
+    if (name !== product.name) {
+      const existingProduct = await Product.findOne({
+        name: { $regex: new RegExp(`^${name.trim()}$`, 'i') },
+        category: product.category,
+        _id: { $ne: product._id }
+      });
+
+      if (existingProduct) {
+        return res.status(400).json({
+          success: false,
+          message: 'A product with this name already exists in this category'
+        });
+      }
+    }
+
+    // Update product
+    product.name = name.trim();
+    product.new_price = price;
+    product.description = description.trim();
+    product.sizes = sizes.map(size => ({
+      size: size.size.trim(),
+      quantity: Number(size.quantity)
+    }));
+
+    await product.save();
+
+    res.json({
+      success: true,
+      message: 'Product updated successfully',
+      product: {
+        id: product.id,
+        name: product.name,
+        new_price: product.new_price,
+        description: product.description,
+        sizes: product.sizes
+      }
+    });
+  } catch (error) {
+    console.error('Error updating product:', error);
+    res.status(500).json({ success: false, message: 'Error updating product' });
+  }
+});
+
+// Add endpoint for removing size
+app.post('/removesize', async (req, res) => {
+  try {
+    const { id, size } = req.body;
+
+    // Validate input
+    if (!id || !size) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Product ID and size are required' 
+      });
+    }
+
+    // Find the product
+    const product = await Product.findOne({ id });
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+
+    // Find the size to remove
+    const sizeIndex = product.sizes.findIndex(s => s.size === size);
+    if (sizeIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Size not found in product' });
+    }
+
+    // Remove the size
+    product.sizes.splice(sizeIndex, 1);
+
+    // Save the changes
+    await product.save();
+
+    res.json({ 
+      success: true, 
+      message: 'Size removed successfully',
+      product 
+    });
+  } catch (error) {
+    console.error('Error removing size:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error removing size: ' + error.message 
+    });
+  }
+});
+
+app.post('/getcart', fetchUser, async (req, res) => {
+  try {
+    const userData = await Users.findOne({ _id: req.user.id });
+    if (!userData) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    res.json(userData.cartData);
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+app.post('/AddToFavourite', fetchUser, async (req, res) => {
+  try {
+    const { itemId, size } = req.body;
+    
+    // Find user and update favoriteData in one operation
+    const updatedUser = await Users.findOneAndUpdate(
+      { _id: req.user.id },
+      { 
+        $set: { 
+          [`favoriteData.${itemId}`]: { 
+            quantity: 1, 
+            size: size || 'N/A' 
+          } 
+        } 
+      },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    res.json({ 
+      success: true, 
+      favoriteData: updatedUser.favoriteData 
+    });
+  } catch (error) {
+    console.error('Error adding to favorites:', error);
+    res.status(500).json({ success: false, error: 'Internal Server Error' });
+  }
+});

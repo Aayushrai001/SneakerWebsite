@@ -2,36 +2,49 @@ import React, { useState, useEffect } from 'react';
 import './Reviews.css';
 import { toast } from 'react-hot-toast';
 
+// Define the Reviews component, receiving props from the parent
 const Reviews = ({ reviews, orders, hasReview, fetchUserReviews }) => {
+  // State for tab switching between "To Be Reviewed" and "History"
   const [selectedTab, setSelectedTab] = useState('toBeReviewed');
+
+  // Pagination state for both tabs
   const [toBeReviewedPage, setToBeReviewedPage] = useState(1);
   const [historyPage, setHistoryPage] = useState(1);
+
+  // State to toggle visibility of the review form for each order
   const [showReviewForm, setShowReviewForm] = useState({});
+
+  // State to store selected ratings for each order
   const [ratings, setRatings] = useState({});
+
+  // Define number of reviews to show per page
   const reviewsPerPage = 5;
 
+  // Function to handle review form submission
   const handleReviewSubmit = async (orderId, rating, feedback) => {
     try {
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem('auth-token'); // Retrieve auth token
       const response = await fetch('http://localhost:5000/user/review', {
         method: 'POST',
         headers: { 'auth-token': token, 'Content-Type': 'application/json' },
         body: JSON.stringify({ purchasedItemId: orderId, rating, feedback }),
       });
       const data = await response.json();
+
       if (data.success) {
-        fetchUserReviews();
-        toggleReviewForm(orderId);
-        setRatings((prev) => ({ ...prev, [orderId]: undefined }));
-        toast.success('Review submitted successfully!');
+        fetchUserReviews(); // Refresh the reviews list
+        toggleReviewForm(orderId); // Close the form
+        setRatings((prev) => ({ ...prev, [orderId]: undefined })); // Reset rating state
+        toast.success('Review submitted successfully!'); // Show success message
       } else {
-        toast(data.message);
+        toast(data.message); // Show error message
       }
     } catch (error) {
-      console.error('Error submitting review:', error);
+      console.error('Error submitting review:', error); // Log errors
     }
   };
 
+  // Function to toggle the visibility of the review form for an order
   const toggleReviewForm = (orderId) => {
     setShowReviewForm((prev) => ({
       ...prev,
@@ -39,6 +52,7 @@ const Reviews = ({ reviews, orders, hasReview, fetchUserReviews }) => {
     }));
   };
 
+  // Function to handle star click for rating selection
   const handleStarClick = (orderId, star) => {
     setRatings((prev) => ({
       ...prev,
@@ -46,31 +60,84 @@ const Reviews = ({ reviews, orders, hasReview, fetchUserReviews }) => {
     }));
   };
 
+  // Filter out orders that have already been reviewed
   const toBeReviewed = orders.filter((order) => !hasReview(order._id));
+
+  // Paginate to-be-reviewed orders
   const paginatedToBeReviewed = toBeReviewed.slice(
     (toBeReviewedPage - 1) * reviewsPerPage,
     toBeReviewedPage * reviewsPerPage
   );
+
+  // Calculate total pages for to-be-reviewed
   const totalToBeReviewedPages = Math.ceil(toBeReviewed.length / reviewsPerPage);
 
+  // Paginate review history
   const paginatedHistory = reviews.slice(
     (historyPage - 1) * reviewsPerPage,
     historyPage * reviewsPerPage
   );
+
+  // Calculate total pages for history
   const totalHistoryPages = Math.ceil(reviews.length / reviewsPerPage);
 
+  // Function to render pagination buttons
   const renderPaginationNumbers = (currentPage, totalPages, setPage) => {
-    return Array.from({ length: totalPages }, (_, i) => (
-      <button
-        key={i + 1}
-        className={`reviews-page-btn ${currentPage === i + 1 ? 'reviews-page-btn-active' : ''}`}
-        onClick={() => setPage(i + 1)}
-      >
-        {i + 1}
-      </button>
-    ));
+    const maxVisiblePages = 8;
+    const halfVisiblePages = Math.floor(maxVisiblePages / 2);
+    
+    let startPage = Math.max(currentPage - halfVisiblePages, 1);
+    let endPage = Math.min(startPage + maxVisiblePages - 1, totalPages);
+
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(endPage - maxVisiblePages + 1, 1);
+    }
+
+    const pages = [];
+
+    // Add previous button
+    if (currentPage > 1) {
+      pages.push(
+        <button
+          key="prev"
+          className="reviews-page-btn"
+          onClick={() => setPage(currentPage - 1)}
+        >
+          ←
+        </button>
+      );
+    }
+
+    // Add page numbers
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(
+        <button
+          key={i}
+          className={`reviews-page-btn ${currentPage === i ? 'reviews-page-btn-active' : ''}`}
+          onClick={() => setPage(i)}
+        >
+          {i}
+        </button>
+      );
+    }
+
+    // Add next button
+    if (currentPage < totalPages) {
+      pages.push(
+        <button
+          key="next"
+          className="reviews-page-btn"
+          onClick={() => setPage(currentPage + 1)}
+        >
+          →
+        </button>
+      );
+    }
+
+    return pages;
   };
 
+  // Format a given date into a readable string
   const formatDate = (date) => {
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -81,7 +148,10 @@ const Reviews = ({ reviews, orders, hasReview, fetchUserReviews }) => {
 
   return (
     <div className="review-container">
+      {/* Title */}
       <h1>My Reviews</h1>
+
+      {/* Tab Navigation */}
       <div className="reviews-tab-nav">
         <button
           className={`reviews-tab-btn ${selectedTab === 'toBeReviewed' ? 'reviews-tab-active' : ''}`}
@@ -97,9 +167,11 @@ const Reviews = ({ reviews, orders, hasReview, fetchUserReviews }) => {
         </button>
       </div>
 
+      {/* To Be Reviewed Section */}
       <div className={`reviews-tab-content reviews-to-be-reviewed ${selectedTab === 'toBeReviewed' ? 'reviews-tab-content-active' : ''}`}>
         {paginatedToBeReviewed.length > 0 ? (
           <>
+            {/* List of orders to be reviewed */}
             <ul className="reviews-list">
               {paginatedToBeReviewed.map((order) => (
                 <li key={order._id} className="reviews-item">
@@ -115,6 +187,7 @@ const Reviews = ({ reviews, orders, hasReview, fetchUserReviews }) => {
                     </button>
                   </div>
 
+                  {/* Review Form Modal */}
                   {showReviewForm[order._id] && (
                     <>
                       <div className="reviews-modal-overlay" onClick={() => toggleReviewForm(order._id)} />
@@ -163,6 +236,8 @@ const Reviews = ({ reviews, orders, hasReview, fetchUserReviews }) => {
                 </li>
               ))}
             </ul>
+
+            {/* Pagination for to-be-reviewed */}
             {totalToBeReviewedPages > 1 && (
               <div className="reviews-pagination">
                 {renderPaginationNumbers(toBeReviewedPage, totalToBeReviewedPages, setToBeReviewedPage)}
@@ -170,13 +245,16 @@ const Reviews = ({ reviews, orders, hasReview, fetchUserReviews }) => {
             )}
           </>
         ) : (
+          // Message if there are no orders to review
           <p className="reviews-no-items">No orders available for review.</p>
         )}
       </div>
 
+      {/* Review History Section */}
       <div className={`reviews-tab-content reviews-history ${selectedTab === 'history' ? 'reviews-tab-content-active' : ''}`}>
         {paginatedHistory.length > 0 ? (
           <>
+            {/* List of submitted reviews */}
             <ul className="reviews-list">
               {paginatedHistory.map((review) => {
                 const correspondingOrder = orders.find(order => order._id.toString() === review.purchasedItem.toString());
@@ -204,6 +282,8 @@ const Reviews = ({ reviews, orders, hasReview, fetchUserReviews }) => {
                 );
               })}
             </ul>
+
+            {/* Pagination for review history */}
             {totalHistoryPages > 1 && (
               <div className="reviews-pagination">
                 {renderPaginationNumbers(historyPage, totalHistoryPages, setHistoryPage)}
@@ -211,6 +291,7 @@ const Reviews = ({ reviews, orders, hasReview, fetchUserReviews }) => {
             )}
           </>
         ) : (
+          // Message if there are no submitted reviews
           <p className="reviews-no-items">No reviews submitted yet.</p>
         )}
       </div>

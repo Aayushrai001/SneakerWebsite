@@ -1,9 +1,11 @@
 /* Base styles */
 .orders-container {
   margin: 70px auto;
-  padding: 30px;
+  padding: 20px;
   background-color: #fff;
   border-radius: 12px;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .orders-header {
@@ -12,12 +14,14 @@
   align-items: center;
   margin-bottom: 24px;
   padding-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
 .orders-header h2 {
   margin: 0;
   font-size: 24px;
-  color: #333;
+  color: black;
   font-weight: 600;
 }
 
@@ -25,6 +29,7 @@
   display: flex;
   align-items: center;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 /* Filter styles */
@@ -45,6 +50,7 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .filter-button:hover {
@@ -98,13 +104,15 @@
   background-color: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  margin: 0 -20px;
+  padding: 0 20px;
 }
 
 .table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  min-width: 1200px;
+  min-width: 1000px;
 }
 
 .table th,
@@ -128,11 +136,31 @@
   font-size: 14px;
 }
 
-.address-cell {
-  max-width: 200px;
-  white-space: normal;
-  line-height: 1.4;
+/* Customer info styles */
+.customer-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 250px;
+}
+
+.customer-name {
+  font-weight: 500;
+  color: #2d3748;
+}
+
+.customer-email {
+  color: #718096;
+  font-size: 13px;
+}
+
+.customer-address {
   color: #4a5568;
+  font-size: 13px;
+  line-height: 1.4;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid #e2e8f0;
 }
 
 .product-image {
@@ -159,6 +187,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   min-width: 120px;
+  max-width: 100%;
 }
 
 .status-select:focus {
@@ -179,6 +208,7 @@
   gap: 12px;
   margin-top: 24px;
   padding: 16px;
+  flex-wrap: wrap;
 }
 
 .pagination button {
@@ -214,6 +244,8 @@
 .page-numbers {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .page-numbers button {
@@ -243,60 +275,151 @@
   color: #4a5568;
 }
 
+/* Tab styles */
+.tabs-container {
+  display: flex;
+  gap: 12px;
+  margin-right: 20px;
+  flex-wrap: wrap;
+}
+
+.tab-button {
+  padding: 10px 20px;
+  border: 1px solid #e2e8f0;
+  background-color: white;
+  color: #4a5568;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.tab-button:hover {
+  background-color: #f7fafc;
+  border-color: #4299e1;
+  color: #4299e1;
+}
+
+.tab-button.active {
+  background-color: #4299e1;
+  border-color: #4299e1;
+  color: white;
+}
+
+/* Status badge styles */
+.status-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.status-badge.pending {
+  background-color: #FEF3C7;
+  color: #92400E;
+}
+
+.status-badge.completed {
+  background-color: #D1FAE5;
+  color: #065F46;
+}
+
+.status-badge.refunded {
+  background-color: #FEE2E2;
+  color: #991B1B;
+}
+
 /* Responsive styles */
 @media (max-width: 1200px) {
   .table-container {
-    margin: 0 -20px;
+    margin: 0 -10px;
+    padding: 0 10px;
   }
   
   .table {
-    padding: 0 20px;
+    min-width: 900px;
   }
 }
 
 @media (max-width: 768px) {
   .orders-container {
-    margin: 20px auto;
-    padding: 20px;
+    margin: 60px auto;
+    padding: 15px;
   }
 
   .orders-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 16px;
+    gap: 12px;
   }
 
   .header-right {
     width: 100%;
-  }
-
-  .filter-container {
-    width: 100%;
-  }
-
-  .filter-button {
-    width: 100%;
     justify-content: space-between;
   }
 
+  .filter-container {
+    position: static;
+  }
+
   .filter-dropdown {
-    width: 100%;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 300px;
   }
 
   .pagination {
-    flex-direction: column;
-    gap: 16px;
+    gap: 8px;
   }
 
   .page-numbers {
-    flex-wrap: wrap;
-    justify-content: center;
+    order: 2;
+    width: 100%;
+    margin: 8px 0;
+  }
+
+  .tabs-container {
+    width: 100%;
+    justify-content: space-between;
+    margin-right: 0;
+  }
+
+  .tab-button {
+    flex: 1;
+    text-align: center;
+    padding: 8px 12px;
+  }
+
+  .customer-info {
+    max-width: 200px;
+  }
+  
+  .customer-name {
+    font-size: 13px;
+  }
+  
+  .customer-email,
+  .customer-address {
+    font-size: 12px;
+  }
+
+  .status-badge {
+    padding: 4px 8px;
+    font-size: 12px;
   }
 }
 
 @media (max-width: 480px) {
   .orders-container {
-    padding: 15px;
+    margin: 50px auto;
+    padding: 10px;
   }
 
   .orders-header h2 {
@@ -304,18 +427,53 @@
   }
 
   .filter-button {
-    font-size: 13px;
     padding: 8px 12px;
+    font-size: 13px;
   }
 
   .status-select {
-    padding: 6px 8px;
-    font-size: 12px;
     min-width: 100px;
+    font-size: 13px;
+    padding: 6px 8px;
   }
 
   .pagination button {
+    min-width: 80px;
     padding: 6px 12px;
     font-size: 13px;
+  }
+
+  .page-numbers button {
+    min-width: 32px;
+    padding: 6px;
+  }
+
+  .product-image {
+    width: 50px;
+    height: 50px;
+  }
+
+  .table th,
+  .table td {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .customer-info {
+    max-width: 150px;
+  }
+  
+  .customer-name {
+    font-size: 12px;
+  }
+  
+  .customer-email,
+  .customer-address {
+    font-size: 11px;
+  }
+
+  .status-badge {
+    padding: 3px 6px;
+    font-size: 11px;
   }
 }

@@ -12,7 +12,7 @@ createRoot(document.getElementById('root')).render(
       <ShopContextProvider>
         <App />
         <Toaster 
-          position="top-left"
+          position="top-right"
           toastOptions={{
             duration: 1500,
             style: {
@@ -25,7 +25,7 @@ createRoot(document.getElementById('root')).render(
             },
             success: {
               style: {
-                background: '#white',
+                background: 'white',
               },
             },
             error: {

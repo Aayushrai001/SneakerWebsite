@@ -4,7 +4,6 @@ import Navbar from './Component/Navbar/Navbar';
 import Shop from './Pages/Shop';
 import ShopCategory from './Pages/ShopCategory';
 import Product from './Pages/Product';
-import Personalize from './Pages/Personalize';
 import AboutUs from './Pages/AboutUs';
 import Cart from './Pages/Cart';
 import Favourite from './Pages/Favourite';
@@ -30,7 +29,6 @@ function App() {
         <Route path='/mens' element={<ShopCategory banner={men_banner} category="men" />} />
         <Route path='/womens' element={<ShopCategory banner={women_banner} category="women" />} />
         <Route path='/kids' element={<ShopCategory banner={kid_banner} category="kid" />} />
-        <Route path='/personalize' element={<Personalize />} />
         <Route path='/aboutUs' element={<AboutUs />} />
         <Route path="/product" element={<Product />}>
           <Route path=':productId' element={<Product />} />

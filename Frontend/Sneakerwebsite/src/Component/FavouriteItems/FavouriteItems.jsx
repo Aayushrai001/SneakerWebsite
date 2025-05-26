@@ -1,20 +1,31 @@
-import React, { useContext, useState } from 'react';
-import './FavouriteItems.css';
-import { ShopContext } from '../../Context/ShopContext';
-import remove_icon from '../assets/cart_cross_icon.png';
-import axios from 'axios';
-import khalti from '../assets/khalti.png';
-import { Link, useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
+import React, { useContext, useState } from 'react'; // Import React hooks
+import './FavouriteItems.css'; // Import component-specific styling
+import { ShopContext } from '../../Context/ShopContext'; // Import context for global state
+import remove_icon from '../assets/cart_cross_icon.png'; // Icon for removing items
+import axios from 'axios'; // Axios for HTTP requests (not used here)
+import khalti from '../assets/khalti.png'; // Khalti logo
+import { Link, useNavigate } from 'react-router-dom'; // Navigation and routing
+import toast from 'react-hot-toast'; // Notification system
 
 const FavouriteItems = () => {
-    const { getTotalFavouriteAmount, all_product, favouriteItems, removefromFavourite, removeItemFromFavourite, addtoFavourite } = useContext(ShopContext);
+    // Extracting context values
+    const {
+        getTotalFavouriteAmount,
+        all_product,
+        favouriteItems,
+        removefromFavourite,
+        removeItemFromFavourite,
+        addtoFavourite
+    } = useContext(ShopContext);
+
+    // Local state for showing checkout, selected payment method, confirmation modal, and selected items
     const [showCheckout, setShowCheckout] = useState(false);
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
     const [showConfirmation, setShowConfirmation] = useState(false);
     const [selectedItems, setSelectedItems] = useState({});
-    const navigate = useNavigate();
+    const navigate = useNavigate(); // Hook for navigation
 
+    // Check if user is logged in
     const token = localStorage.getItem('auth-token');
     if (!token) {
         return (
@@ -26,14 +37,35 @@ const FavouriteItems = () => {
         );
     }
 
-    const increaseFavouriteItem = (itemId) => {
-        addtoFavourite(itemId, favouriteItems[itemId]?.size);
-    };
-
+    // Decrease quantity of an item or remove if quantity becomes 0 or less
     const decreaseFavouriteItem = (itemId) => {
-        removefromFavourite(itemId);
+        const currentQuantity = favouriteItems[itemId]?.quantity || 0;
+        if (currentQuantity <= 1) {
+            removeItemFromFavourite(itemId);
+            toast.success("Item removed from favourites");
+        } else {
+            removefromFavourite(itemId);
+        }
     };
 
+    // Increase item quantity, check stock availability for the selected size
+    const increaseFavouriteItem = (itemId) => {
+        const product = all_product.find(p => p.id === Number(itemId));
+        if (!product) return;
+
+        const size = favouriteItems[itemId]?.size;
+        const sizeData = product.sizes.find(s => s.size === size);
+        const currentQuantity = favouriteItems[itemId]?.quantity || 0;
+
+        if (!sizeData || sizeData.quantity <= currentQuantity) {
+            toast.error(`Only ${sizeData?.quantity || 0} items available for size ${size}`);
+            return;
+        }
+
+        addtoFavourite(itemId, size);
+    };
+
+    // Toggle selection state for an item
     const toggleItemSelection = (itemId) => {
         setSelectedItems(prev => ({
             ...prev,
@@ -41,14 +73,13 @@ const FavouriteItems = () => {
         }));
     };
 
+    // Select or deselect all items
     const selectAllItems = () => {
         const allSelected = Object.keys(favouriteItems).every(id => selectedItems[id]);
-        
+
         if (allSelected) {
-            // If all are selected, deselect all
             setSelectedItems({});
         } else {
-            // Otherwise, select all
             const newSelectedItems = {};
             Object.keys(favouriteItems).forEach(id => {
                 newSelectedItems[id] = true;
@@ -57,6 +88,7 @@ const FavouriteItems = () => {
         }
     };
 
+    // Calculate total price of selected items
     const getSelectedItemsTotal = () => {
         return Object.entries(favouriteItems).reduce((total, [id, item]) => {
             if (selectedItems[id]) {
@@ -67,10 +99,12 @@ const FavouriteItems = () => {
         }, 0);
     };
 
+    // Count selected items
     const getSelectedItemsCount = () => {
         return Object.keys(selectedItems).filter(id => selectedItems[id]).length;
     };
 
+    // Handle payment based on selected payment method
     const handlePayment = async (paymentMethod) => {
         try {
             if (!localStorage.getItem('auth-token')) {
@@ -84,16 +118,22 @@ const FavouriteItems = () => {
                 return;
             }
 
+            // Set purchase source for redirection tracking
+            localStorage.setItem('purchaseSource', 'favorites');
+
             const token = localStorage.getItem('auth-token');
+
+            // Filter only selected and valid items
             const favouriteProducts = all_product.filter(item => 
                 favouriteItems[item.id]?.quantity > 0 && selectedItems[item.id]
             );
-            
+
             if (favouriteProducts.length === 0) {
                 toast.error('Your favourites list is empty');
                 return;
             }
 
+            // Construct order details
             const orderDetails = favouriteProducts.map(product => ({
                 productId: product._id,
                 productName: product.name,
@@ -103,8 +143,10 @@ const FavouriteItems = () => {
                 productImage: product.image,
             }));
 
+            // Save order details locally
             localStorage.setItem('lastOrder', JSON.stringify(orderDetails));
 
+            // Make payment initialization request
             const response = await fetch('http://localhost:5000/initialize-khalti', {
                 method: 'POST',
                 headers: {
@@ -114,17 +156,20 @@ const FavouriteItems = () => {
                 body: JSON.stringify({
                     cartItems: Object.entries(favouriteItems)
                         .filter(([id, item]) => item.quantity > 0 && selectedItems[id])
-                        .map(([id, item]) => ({
-                            productId: all_product.find(p => p.id === Number(id))?._id,
-                            quantity: item.quantity,
-                            totalPrice: all_product.find(p => p.id === Number(id)).new_price * item.quantity,
-                            size: item.size || 'N/A',
-                        })),
+                        .map(([id, item]) => {
+                            const product = all_product.find(p => p.id === Number(id));
+                            return {
+                                productId: product._id,
+                                quantity: item.quantity,
+                                size: item.size || 'N/A'
+                            };
+                        }),
                     totalPrice: getSelectedItemsTotal(),
                     paymentMethod
                 })
             });
 
+            // Handle server errors
             if (!response.ok) {
                 const contentType = response.headers.get('content-type');
                 if (!contentType || !contentType.includes('application/json')) {
@@ -138,17 +183,16 @@ const FavouriteItems = () => {
 
             const data = await response.json();
 
+            // If COD, process and redirect
             if (paymentMethod === 'COD') {
-                toast.success('Order placed successfully with Cash on Delivery');
                 setShowCheckout(false);
-                
-                // Remove selected items from favorites
+
                 const selectedIds = Object.keys(selectedItems).filter(id => selectedItems[id]);
                 console.log('Removing selected items from favorites:', selectedIds);
                 for (const id of selectedIds) {
                     removeItemFromFavourite(id);
                 }
-                
+
                 if (data.redirect_url) {
                     navigate(data.redirect_url.replace('http://localhost:5173', ''));
                 } else if (data.transaction_id) {
@@ -159,6 +203,7 @@ const FavouriteItems = () => {
                 return;
             }
 
+            // If Khalti, redirect to payment URL
             if (paymentMethod === 'khalti' && data.payment?.payment_url) {
                 window.location.href = data.payment.payment_url;
             } else {
@@ -172,6 +217,7 @@ const FavouriteItems = () => {
 
     return (
         <div className='cartitems'>
+            {/* Header format */}
             <div className="cartitems-format-main">
                 <p>Select</p>
                 <p>Products</p>
@@ -183,6 +229,8 @@ const FavouriteItems = () => {
                 <p>Remove</p>
             </div>
             <hr />
+            
+            {/* Render each favourite item */}
             {all_product.map((product) => (
                 favouriteItems[product.id]?.quantity > 0 && (
                     <div key={product.id}>
@@ -205,7 +253,10 @@ const FavouriteItems = () => {
                             <p>Rs.{product.new_price * favouriteItems[product.id].quantity}</p>
                             <img
                                 src={remove_icon}
-                                onClick={() => removefromFavourite(product.id)}
+                                onClick={() => {
+                                    removefromFavourite(product.id);
+                                    toast.success("Removed from Favourite");
+                                }}
                                 alt="Remove"
                                 className="cartitems-remove-icon"
                             />
@@ -214,8 +265,11 @@ const FavouriteItems = () => {
                     </div>
                 )
             ))}
+
+            {/* Cart total and checkout section */}
             <div className="cartitems-down">
                 <div className="cartitems-total">
+                    {/* Select All Option */}
                     <div className="select-all-container">
                         <input 
                             type="checkbox" 
@@ -242,6 +296,7 @@ const FavouriteItems = () => {
                             <h3>Rs.{getSelectedItemsTotal()}</h3>
                         </div>
                     </div>
+                    {/* Checkout Button */}
                     <button 
                         className='checkout' 
                         onClick={() => setShowCheckout(true)}
@@ -249,6 +304,8 @@ const FavouriteItems = () => {
                     >
                         CHECKOUT ({getSelectedItemsCount()} items)
                     </button>
+
+                    {/* Checkout Modal */}
                     {showCheckout && (
                         <>
                             <div className="modal-overlay" onClick={() => setShowCheckout(false)} />
@@ -256,6 +313,7 @@ const FavouriteItems = () => {
                                 <i className="fas fa-times checkout-close" onClick={() => setShowCheckout(false)} />
                                 <h2>Checkout</h2>
                                 
+                                {/* Item Summary */}
                                 {all_product.filter(item => 
                                     favouriteItems[item.id]?.quantity > 0 && selectedItems[item.id]
                                 ).map(item => (
@@ -283,11 +341,13 @@ const FavouriteItems = () => {
                                     </div>
                                 ))}
                                 
+                                {/* Total Display */}
                                 <div className="checkout-info">
                                     <h3>Total Amount:</h3>
                                     <h3>Rs. {getSelectedItemsTotal()}</h3>
                                 </div>
                                 
+                                {/* Payment Method Buttons */}
                                 <div className="payment-options">
                                     <h3>Select Payment Method</h3>
                                     <div className="payment-buttons">
@@ -317,6 +377,7 @@ const FavouriteItems = () => {
                         </>
                     )}
 
+                    {/* Confirmation Modal for COD */}
                     {showConfirmation && (
                         <>
                             <div className="modal-overlay" onClick={() => setShowConfirmation(false)} />
@@ -356,4 +417,4 @@ const FavouriteItems = () => {
     );
 };
 
-export default FavouriteItems;
+export default FavouriteItems; 

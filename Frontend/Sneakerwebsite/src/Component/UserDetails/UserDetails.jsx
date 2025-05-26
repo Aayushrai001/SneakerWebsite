@@ -1,43 +1,66 @@
 import React, { useState, useEffect } from 'react';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import './UserDetails.css'
+import { toast } from 'react-hot-toast'; 
+import './UserDetails.css' 
 
+// Define the UserDetails component, which accepts userData and setUserData as props
 const UserDetails = ({ userData, setUserData }) => {
+  // State to manage whether the form is in editing mode
   const [isEditing, setIsEditing] = useState(false);
+
+  // State to store form input data when editing
   const [formData, setFormData] = useState({
     name: userData.name || '',
     phone: userData.phone || '',
     address: userData.address || '',
   });
+
+  // State for the image file selected by the user
   const [selectedImage, setSelectedImage] = useState(null);
+
+  // State to store preview URL or base64 string of the image
   const [previewImage, setPreviewImage] = useState(null);
 
-  // Update preview image when userData changes
+  // useEffect to update preview image when userData changes
   useEffect(() => {
     setPreviewImage(userData.profileImage || null);
   }, [userData.profileImage]);
 
+  // useEffect to update formData when switching to edit mode
+  useEffect(() => {
+    if (isEditing) {
+      setFormData({
+        name: userData.name || '',
+        phone: userData.phone || '',
+        address: userData.address || '',
+      });
+    }
+  }, [isEditing, userData]);
+
+  // Function to handle changes in form input fields
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // Function to handle image selection and preview
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Check file type
+      // Validate image type
       if (!['image/jpeg', 'image/png'].includes(file.type)) {
         toast.error('Please upload only JPG or PNG images');
         return;
       }
       
-      // Check file size (max 5MB)
+      // Validate image size (limit to 5MB)
       if (file.size > 5 * 1024 * 1024) {
         toast.error('Image size should be less than 5MB');
         return;
       }
 
+      // Set selected image file
       setSelectedImage(file);
+
+      // Read image file as base64 for preview
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreviewImage(reader.result);
@@ -46,32 +69,37 @@ const UserDetails = ({ userData, setUserData }) => {
     }
   };
 
+  // Function to handle profile update submission
   const handleUpdate = async () => {
     try {
-      const token = localStorage.getItem('auth-token');
-      const formDataToSend = new FormData();
+      const token = localStorage.getItem('auth-token'); // Get auth token
+      const formDataToSend = new FormData(); // Create form data for multipart/form-data request
       
-      // Append text fields
+      // Append text fields to FormData
       formDataToSend.append('name', formData.name);
       formDataToSend.append('phone', formData.phone);
       formDataToSend.append('address', formData.address);
       
-      // Append image if selected
+      // Append image file if selected
       if (selectedImage) {
         formDataToSend.append('profileImage', selectedImage);
       }
 
+      // Send PUT request to update user details
       const response = await fetch('http://localhost:5000/user/update', {
         method: 'PUT',
         headers: { 'auth-token': token },
         body: formDataToSend,
       });
       
+      // Parse response
       const data = await response.json();
+
+      // Handle success or failure
       if (data.success) {
-        setUserData(data.user);
-        setSelectedImage(null); // Reset selected image after successful update
-        setIsEditing(false);
+        setUserData(data.user); // Update user data in parent component
+        setSelectedImage(null); // Reset selected image
+        setIsEditing(false); // Exit editing mode
         toast.success('Profile updated successfully!');
       } else {
         toast.error(data.message || 'Failed to update profile');
@@ -82,21 +110,24 @@ const UserDetails = ({ userData, setUserData }) => {
     }
   };
 
+  // Function to cancel editing and reset image preview
   const handleCancel = () => {
     setIsEditing(false);
     setSelectedImage(null);
     setPreviewImage(userData.profileImage || null);
   };
 
+  // JSX returned by the component
   return (
     <div className="user-details">
-      <ToastContainer position="top-right" />
       <h3>User Information</h3>
       {isEditing ? (
+        // Render editable form if in editing mode
         <div className="edit-form">
           <div className="profile-image-section">
             <div className="profile-image-container">
               {previewImage ? (
+                // Show preview of the selected image
                 <img 
                   src={previewImage} 
                   alt="Profile" 
@@ -107,6 +138,7 @@ const UserDetails = ({ userData, setUserData }) => {
                   }}
                 />
               ) : (
+                // Fallback UI if no image is selected
                 <div className="profile-image-placeholder">
                   <span>No Image</span>
                 </div>
@@ -162,10 +194,12 @@ const UserDetails = ({ userData, setUserData }) => {
           </div>
         </div>
       ) : (
+        // Render static view if not in editing mode
         <>
           <div className="profile-image-section">
             <div className="profile-image-container">
               {userData.profileImage ? (
+                // Display user's profile image
                 <img 
                   src={userData.profileImage} 
                   alt="Profile" 
@@ -176,6 +210,7 @@ const UserDetails = ({ userData, setUserData }) => {
                   }}
                 />
               ) : (
+                // Show placeholder if no image available
                 <div className="profile-image-placeholder">
                   <span>No Image</span>
                 </div>
